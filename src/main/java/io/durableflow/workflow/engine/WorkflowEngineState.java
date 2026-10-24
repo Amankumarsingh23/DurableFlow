@@ -4,6 +4,7 @@ import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.run.*;
+import io.durableflow.workflow.history.*;
 import io.durableflow.workflow.task.ActivityTaskRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,16 +30,18 @@ public class WorkflowEngineState {
     private final WorkflowDefinitionValidator validator;
     private final Clock clock;
     private final ActivityTaskRepository tasks;
+    private final WorkflowHistoryWriter history;
 
     public WorkflowEngineState(WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
                                ActivityExecutionRepository activities, WorkflowDefinitionValidator validator,
-                               Clock clock, ActivityTaskRepository tasks) {
+                               Clock clock, ActivityTaskRepository tasks, WorkflowHistoryWriter history) {
         this.runs = runs;
         this.definitions = definitions;
         this.activities = activities;
         this.validator = validator;
         this.clock = clock;
         this.tasks = tasks;
+        this.history = history;
     }
 
     public record Work(UUID activityExecutionId, String activityType, Map<String, Object> input) {}
@@ -74,6 +77,7 @@ public class WorkflowEngineState {
         }
         if (rows.stream().allMatch(row -> row.getStatus() == ActivityExecutionStatus.COMPLETED)) {
             run.markCompleted(clock.instant());
+            history.append(runId, null, WorkflowEventType.WORKFLOW_COMPLETED, Map.of());
             return new Decision(null, null);
         }
         if (rows.stream().anyMatch(row -> row.getStatus() == ActivityExecutionStatus.FAILED)) {
@@ -88,6 +92,8 @@ public class WorkflowEngineState {
                     .allMatch(id -> byId.get(id).getStatus() == ActivityExecutionStatus.COMPLETED);
             if (eligible) {
                 row.markRunning(run.getInputJson(), clock.instant());
+                history.append(runId, row.getId(), WorkflowEventType.ACTIVITY_STARTED,
+                        Map.of("attemptCount", row.getAttemptCount(), "executionMode", "LOCAL"));
                 return new Decision(new Work(row.getId(), step.activity(), row.getInputJson()), null);
             }
         }
@@ -97,6 +103,7 @@ public class WorkflowEngineState {
     public void complete(UUID runId, UUID activityId, Map<String, Object> output) {
         running(runId);
         activity(runId, activityId).markCompleted(output, clock.instant());
+        history.append(runId, activityId, WorkflowEventType.ACTIVITY_COMPLETED, Map.of("executionMode", "LOCAL"));
     }
 
     /** Activity and workflow failure commit atomically. */
@@ -105,10 +112,13 @@ public class WorkflowEngineState {
         var now = clock.instant();
         activity(runId, activityId).markFailed(message, now);
         run.markFailed(now);
+        history.append(runId, activityId, WorkflowEventType.ACTIVITY_FAILED, Map.of("code", "ACTIVITY_FAILURE", "executionMode", "LOCAL"));
+        history.append(runId, null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "ACTIVITY_FAILURE"));
     }
 
     private Decision noProgress(WorkflowRunEntity run, String message) {
         run.markFailed(clock.instant());
+        history.append(run.getId(), null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "NO_VALID_PROGRESS"));
         // Return rather than throw so the FAILED checkpoint commits before HTTP reports the error.
         return new Decision(null, message);
     }

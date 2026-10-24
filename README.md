@@ -552,3 +552,29 @@ mvn verify
 Session 14 is implemented and statically checked. Compilation, migrations/startup, tests
 and timeout/shutdown demos remain runtime unverified because Java, Maven and Docker are
 unavailable. No workflow cancellation or compensation is added.
+
+## Session 15: append-only workflow history
+
+V6 adds workflow_event and a per-run history counter. Events are inserted in the same
+transaction as their state changes, ordered by a database-serialized sequence. V1–V5
+remain unchanged. Existing runs are not backfilled with invented past events.
+
+History covers workflow start/completion/failure, task scheduling/claim/reclaim, retries,
+timeouts and activity outcomes. Legacy local transitions are recorded too. Payloads use
+identifiers, counters, timing and safe failure codes; they omit whole inputs/outputs and
+raw exception messages. Polling, heartbeats and reads do not generate events.
+
+```powershell
+Invoke-RestMethod "http://localhost:8080/api/workflow-runs/$runId/events" | ConvertTo-Json -Depth 10
+mvn "-Dtest=WorkflowHistoryIntegrationTest" test
+mvn verify
+```
+
+GET /api/workflow-runs/{runId}/events returns ordered event DTOs. The ordinary run response
+stays unchanged. [History design and demo](docs/event-history.md) explains transaction
+atomicity, sequence allocation, metadata and a timeout/retry/reclaim timeline.
+
+This remains snapshot operational state plus audit history, not full event sourcing or
+deterministic replay. Session 15 is implemented and statically checked. Compilation,
+migrations, tests, startup and the history API demo remain runtime unverified because
+Java, Maven and Docker are unavailable here.

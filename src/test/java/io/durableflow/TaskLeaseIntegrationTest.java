@@ -46,7 +46,7 @@ class TaskLeaseIntegrationTest {
 
     @BeforeEach
     void cleanOwnContainer() {
-        jdbc.execute("TRUNCATE activity_task, activity_execution, workflow_run, workflow_definition");
+        jdbc.execute("TRUNCATE workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
     }
 
     @Test

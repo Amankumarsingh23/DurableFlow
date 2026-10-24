@@ -59,7 +59,7 @@ class PostgresTaskQueueIntegrationTest {
     @BeforeEach
     void resetIsolatedTestDatabase() {
         // This class owns its own container, and no poller runs in the server test profile.
-        jdbc.execute("TRUNCATE activity_task, activity_execution, workflow_run, workflow_definition");
+        jdbc.execute("TRUNCATE workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
     }
 
     @Test

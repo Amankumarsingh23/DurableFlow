@@ -39,7 +39,7 @@ class TimeoutShutdownIntegrationTest {
     @Autowired ActivityTaskRepository tasks;
     @Autowired JdbcTemplate jdbc;
 
-    @BeforeEach void clean() { jdbc.execute("TRUNCATE activity_task, activity_execution, workflow_run, workflow_definition"); }
+    @BeforeEach void clean() { jdbc.execute("TRUNCATE workflow_event, activity_task, activity_execution, workflow_run, workflow_definition"); }
 
     @Test
     void timeoutRetriesPaymentWithSameKeyAndFencesLateOldCompletion() throws Exception {

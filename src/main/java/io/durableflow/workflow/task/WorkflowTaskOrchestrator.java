@@ -5,6 +5,7 @@ import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.engine.OrphanedActivityException;
 import io.durableflow.workflow.run.*;
+import io.durableflow.workflow.history.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -23,12 +24,14 @@ public class WorkflowTaskOrchestrator {
     private final ActivityTaskRepository tasks;
     private final WorkflowRunService runService;
     private final Clock clock;
+    private final WorkflowHistoryWriter history;
 
     public WorkflowTaskOrchestrator(WorkflowRunRepository runs, ActivityExecutionRepository activities,
             WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator,
-            ActivityTaskRepository tasks, WorkflowRunService runService, Clock clock) {
+            ActivityTaskRepository tasks, WorkflowRunService runService, Clock clock, WorkflowHistoryWriter history) {
         this.runs = runs; this.activities = activities; this.definitions = definitions;
         this.validator = validator; this.tasks = tasks; this.runService = runService; this.clock = clock;
+        this.history = history;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
@@ -55,15 +58,20 @@ public class WorkflowTaskOrchestrator {
         }
         if (rows.stream().anyMatch(a -> a.getStatus() == ActivityExecutionStatus.FAILED)) {
             run.markFailed(clock.instant());
+            history.append(runId, null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "ACTIVITY_FAILURE"));
         } else if (rows.stream().allMatch(a -> a.getStatus() == ActivityExecutionStatus.COMPLETED)) {
             run.markCompleted(clock.instant());
+            history.append(runId, null, WorkflowEventType.WORKFLOW_COMPLETED, Map.of());
         } else {
             for (var step : steps) {
                 var row = byId.get(step.id());
                 if (row.getStatus() == ActivityExecutionStatus.PENDING && step.dependsOn().stream()
                         .allMatch(id -> byId.get(id).getStatus() == ActivityExecutionStatus.COMPLETED)) {
                     var existing = queued.get(row.getId());
-                    if (existing == null) tasks.save(ActivityTaskEntity.ready(row.getId(), clock.instant()));
+                    if (existing == null) {
+                        var task = tasks.save(ActivityTaskEntity.ready(row.getId(), clock.instant()));
+                        history.append(runId, row.getId(), WorkflowEventType.ACTIVITY_SCHEDULED, Map.of("taskId", task.getId().toString()));
+                    }
                     else if (existing.getStatus() != ActivityTaskStatus.READY) {
                         throw new ApiException(HttpStatus.CONFLICT, "Queued task does not match activity state");
                     }

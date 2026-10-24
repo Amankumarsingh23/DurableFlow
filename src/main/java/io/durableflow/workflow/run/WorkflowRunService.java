@@ -3,6 +3,7 @@ package io.durableflow.workflow.run;
 import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
+import io.durableflow.workflow.history.*;
 import jakarta.validation.Validator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,15 +20,18 @@ public class WorkflowRunService {
     private final ActivityExecutionRepository activities;
     private final Validator validator;
     private final Clock clock;
+    private final WorkflowHistoryWriter history;
 
     public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
-                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock) {
+                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
+                              WorkflowHistoryWriter history) {
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
         this.activities = activities;
         this.validator = validator;
         this.clock = clock;
+        this.history = history;
     }
 
     @Transactional
@@ -58,6 +62,7 @@ public class WorkflowRunService {
         }).toList();
         // Every insert, including the run above, belongs to this transaction.
         activities.saveAllAndFlush(executions);
+        history.append(run.getId(), null, WorkflowEventType.WORKFLOW_STARTED, java.util.Map.of());
         return new WorkflowRunResponse(run.getId(), definition.name(), definition.version(), run.getStatus(),
                 run.getInputJson(), executions.stream()
                         .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus(),
