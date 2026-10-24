@@ -18,7 +18,9 @@ public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity
             JOIN activity_execution a ON a.id = t.activity_execution_id
             JOIN workflow_run r ON r.id = a.workflow_run_id
             WHERE r.status = 'RUNNING' AND (
-                (t.status = 'READY' AND t.available_at <= statement_timestamp() AND a.status = 'PENDING')
+                (t.status = 'READY' AND t.available_at <= statement_timestamp() AND
+                    ((t.lease_generation = 0 AND a.status = 'PENDING')
+                     OR (t.lease_generation > 0 AND a.status = 'RUNNING')))
                 OR (t.status = 'CLAIMED' AND t.lease_expires_at <= statement_timestamp() AND a.status = 'RUNNING')
             )
             ORDER BY CASE WHEN t.status = 'READY' THEN t.available_at ELSE t.lease_expires_at END,
@@ -47,6 +49,17 @@ public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity
             """, nativeQuery = true)
     int finishOwned(@Param("taskId") UUID taskId, @Param("workerId") String workerId,
                     @Param("generation") long generation, @Param("outcome") String outcome);
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            UPDATE activity_task SET status = 'READY', worker_id = NULL, claimed_at = NULL,
+                lease_expires_at = NULL,
+                available_at = clock_timestamp() + CAST(:delayMillis AS double precision) * INTERVAL '1 millisecond'
+            WHERE id = :taskId AND status = 'CLAIMED' AND worker_id = :workerId
+              AND lease_generation = :generation AND lease_expires_at > clock_timestamp()
+            """, nativeQuery = true)
+    int rescheduleOwned(@Param("taskId") UUID taskId, @Param("workerId") String workerId,
+                        @Param("generation") long generation, @Param("delayMillis") long delayMillis);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from ActivityTaskEntity t where t.id = :taskId")

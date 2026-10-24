@@ -57,9 +57,7 @@ public class TaskWorker {
             session.ensureOwned();
             if (stopping) throw new OwnershipLostException(claim);
             if (handlerFailure != null) {
-                String message = handlerFailure.getClass().getSimpleName() + ": "
-                        + Objects.toString(handlerFailure.getMessage(), "Activity execution failed");
-                transactions.fail(claim, message.substring(0, Math.min(message.length(), 2000)));
+                transactions.handleFailure(claim, handlerFailure);
                 return true;
             }
             // SQL failure is not a handler failure. Expired/stale ownership cannot alter logical state.

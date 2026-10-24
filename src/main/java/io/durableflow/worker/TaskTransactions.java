@@ -5,6 +5,7 @@ import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.run.*;
 import io.durableflow.workflow.task.*;
+import io.durableflow.worker.retry.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -23,12 +24,17 @@ public class TaskTransactions {
     private final WorkflowDefinitionRepository definitions;
     private final JdbcTemplate jdbc;
     private final WorkerLeaseSettings leases;
+    private final RetryPolicy retryPolicy;
+    private final RetryDelayCalculator retryDelays;
+    private final FailureClassifier classifier;
 
     public TaskTransactions(ActivityTaskRepository tasks, ActivityExecutionRepository activities,
                             WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
-                            JdbcTemplate jdbc, WorkerLeaseSettings leases) {
+                            JdbcTemplate jdbc, WorkerLeaseSettings leases, RetryPolicy retryPolicy,
+                            RetryDelayCalculator retryDelays, FailureClassifier classifier) {
         this.tasks = tasks; this.activities = activities; this.runs = runs;
         this.definitions = definitions; this.jdbc = jdbc; this.leases = leases;
+        this.retryPolicy = retryPolicy; this.retryDelays = retryDelays; this.classifier = classifier;
     }
 
     public Optional<ClaimedTask> claim(String workerId) {
@@ -49,14 +55,24 @@ public class TaskTransactions {
             if (task.getLeaseExpiresAt().isAfter(now) || activity.getStatus() != ActivityExecutionStatus.RUNNING) {
                 return Optional.empty();
             }
-        } else if (activity.getStatus() != ActivityExecutionStatus.PENDING || task.getAvailableAt().isAfter(now)) {
+        } else if ((activity.getStatus() != ActivityExecutionStatus.PENDING
+                && !(activity.getStatus() == ActivityExecutionStatus.RUNNING && task.getLeaseGeneration() > 0))
+                || task.getAvailableAt().isAfter(now)) {
+            return Optional.empty();
+        }
+        if (activity.getAttemptCount() >= retryPolicy.maxAttempts()) {
+            // Recover a crashed final attempt without starting an extra handler invocation.
+            task.claimLease(workerId, now, now.plusMillis(leases.leaseMillis()));
+            activity.markFailed("Maximum attempts exhausted before another execution could start", now);
+            run.markFailed(now);
+            task.fail();
             return Optional.empty();
         }
         var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
         String type = WorkflowDefinitionDocument.steps(definition.getDefinitionJson()).stream()
                 .filter(step -> step.id().equals(activity.getActivityId())).findFirst().orElseThrow().activity();
         task.claimLease(workerId, now, now.plusMillis(leases.leaseMillis()));
-        if (reclaim) activity.recordReclaimedAttempt(now);
+        if (activity.getStatus() == ActivityExecutionStatus.RUNNING) activity.startNextAttempt(now);
         else activity.markRunning(run.getInputJson(), now);
         return Optional.of(new ClaimedTask(task.getId(), runId, activity.getId(), type, activity.getInputJson(),
                 workerId, task.getLeaseGeneration(), task.getLeaseExpiresAt()));
@@ -84,6 +100,29 @@ public class TaskTransactions {
         runningActivity(claim).markFailed(message, now);
         if (run.getStatus() == WorkflowRunStatus.RUNNING) run.markFailed(now);
         finish(claim, ActivityTaskStatus.FAILED);
+    }
+
+    public void handleFailure(ClaimedTask claim, Exception failure) {
+        owned(claim);
+        var run = runs.findByIdForUpdate(claim.runId()).orElseThrow();
+        allowOutcome(run);
+        var activity = runningActivity(claim);
+        String message = failure.getClass().getSimpleName() + ": "
+                + Objects.toString(failure.getMessage(), "Activity execution failed");
+        message = message.substring(0, Math.min(message.length(), 2000));
+        if (run.getStatus() == WorkflowRunStatus.RUNNING
+                && classifier.classify(failure) == FailureClassifier.Classification.RETRYABLE
+                && activity.getAttemptCount() < retryPolicy.maxAttempts()) {
+            long delay = retryDelays.delayMillis(retryPolicy, activity.getAttemptCount());
+            activity.recordRetryFailure(message, databaseNow());
+            if (tasks.rescheduleOwned(claim.taskId(), claim.workerId(), claim.leaseGeneration(), delay) != 1) {
+                throw new OwnershipLostException(claim); // Rolls back the failure metadata too.
+            }
+        } else {
+            activity.markFailed(message, databaseNow());
+            if (run.getStatus() == WorkflowRunStatus.RUNNING) run.markFailed(databaseNow());
+            finish(claim, ActivityTaskStatus.FAILED);
+        }
     }
 
     private ActivityTaskEntity owned(ClaimedTask claim) {

@@ -2,7 +2,7 @@
 
 A durable workflow orchestration engine built incrementally for learning and SDE interview preparation.
 
-DurableFlow separates orchestration from activity execution through a durable PostgreSQL task queue. Independent non-HTTP workers use FOR UPDATE SKIP LOCKED, renewable leases and heartbeats; expired claims can be reclaimed, and stale worker results are rejected. Earlier synchronous development/recovery endpoints remain available for unqueued runs. See [Session 11 lease design and verification](docs/task-leases.md). Runtime verification, the two-worker demo and a manual JVM-crash experiment remain outstanding.
+DurableFlow separates orchestration from activity execution through a durable PostgreSQL task queue. Independent non-HTTP workers use FOR UPDATE SKIP LOCKED, renewable leases and heartbeats; expired claims can be reclaimed, and stale worker results are rejected. Stable activity keys support provider idempotency, and explicitly transient failures receive durable bounded retries with backoff and jitter. Earlier synchronous development/recovery endpoints remain available for unqueued runs. See [retry design and verification](docs/retries.md). Runtime verification, the two-worker demo and a manual JVM-crash experiment remain outstanding.
 
 ## Prerequisites
 
@@ -493,3 +493,32 @@ mvn verify
 
 Session 12 implementation and static checks are complete. Tests, migrations/startup and
 process demos remain unverified because Java, Maven and Docker are unavailable here.
+
+## Session 13: durable retries, backoff and budgets
+
+Queued workers now classify explicit RetryableActivityException failures for bounded
+retries; unknown/programming errors and idempotency-key misuse fail immediately.
+Defaults: maxAttempts 3 total, initial delay 1000ms, multiplier 2, max delay 30000ms,
+full jitter. See [retry design and configuration](docs/retries.md).
+
+A fenced transaction returns the task to READY, clears ownership/deadline, and stores
+DB-time available_at plus latest failure information. The activity/workflow stay RUNNING;
+downstream work stays blocked. No sleeping worker or in-memory retry schedule is involved.
+Due claims increment attempts/generation while preserving the stable idempotency key.
+Exhaustion fails task/activity/workflow, including recovery of a crashed final attempt.
+No hard handler timeout is added; a hung handler may continue heartbeating.
+
+V5 updates the lease constraint for scheduled READY retries; V1–V4 remain unchanged.
+Stop older binaries before upgrading. Legacy local execution remains fail-fast.
+Earlier session sections describe their historical checkpoints; Session 13 supersedes
+the blanket no-ordinary-retry statements for the queued worker path.
+
+```powershell
+mvn "-Dtest=RetryPolicyTest" test
+mvn "-Dtest=RetryIntegrationTest,TaskLeaseIntegrationTest,PaymentIdempotencyIntegrationTest,PostgresTaskQueueIntegrationTest" test
+mvn verify
+```
+
+Session 13 is implemented and statically checked. Compilation, migration execution,
+tests, startup and worker demos remain unverified because Java, Maven and Docker are
+unavailable. The fake provider's single-JVM limitation still applies.

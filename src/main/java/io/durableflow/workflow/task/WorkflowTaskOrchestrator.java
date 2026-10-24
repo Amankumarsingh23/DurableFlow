@@ -41,7 +41,9 @@ public class WorkflowTaskOrchestrator {
                 .collect(Collectors.toMap(ActivityTaskEntity::getActivityExecutionId, Function.identity()));
         var uncertain = rows.stream().filter(a -> a.getStatus() == ActivityExecutionStatus.RUNNING)
                 .filter(a -> !queued.containsKey(a.getId())
-                        || queued.get(a.getId()).getStatus() != ActivityTaskStatus.CLAIMED)
+                        || (queued.get(a.getId()).getStatus() != ActivityTaskStatus.CLAIMED
+                            && !(queued.get(a.getId()).getStatus() == ActivityTaskStatus.READY
+                                && queued.get(a.getId()).getLeaseGeneration() > 0)))
                 .map(ActivityExecutionEntity::getActivityId).toList();
         if (!uncertain.isEmpty()) throw new OrphanedActivityException(runId, uncertain);
         var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();

@@ -93,6 +93,7 @@ class WorkerHeartbeatsTest {
             assertThatThrownBy(worker::runOne).isInstanceOf(OwnershipLostException.class);
             verify(transactions, never()).complete(any(), any());
             verify(transactions, never()).fail(any(), any());
+            verify(transactions, never()).handleFailure(any(), any());
             verifyNoInteractions(orchestrator);
             worker.stop();
             assertThat(worker.runOne()).isFalse();

@@ -1,5 +1,8 @@
 # Session 11: renewable ownership and crash reclamation
 
+Session 11 checkpoint notes: [Session 13](retries.md) adds scheduled READY/RUNNING retries,
+attempt budgets and V5. Its policy supersedes the no-ordinary-retry statements below.
+
 Session 11 supersedes the abandoned-claim limitation in the Session 10 queue notes.
 PostgreSQL remains the durable source of truth. Handlers execute outside transactions.
 Reclamation permits **at-least-once execution**: an old handler and its replacement can

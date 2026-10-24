@@ -31,7 +31,7 @@ public class WorkerPollingConfiguration {
             if (stopping.get()) return;
             try { worker.runOne(); }
             catch (OwnershipLostException lost) { LOG.warn("{}", lost.getMessage()); }
-            catch (Exception failure) { LOG.error("Worker poll failed; no ordinary handler retry is performed", failure); }
+            catch (Exception failure) { LOG.error("Worker poll failed; durable task state determines subsequent recovery", failure); }
         }
 
         @EventListener(ContextClosedEvent.class)

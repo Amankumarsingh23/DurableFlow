@@ -1,5 +1,8 @@
 # Session 12: idempotent payment attempts
 
+Session 12 checkpoint notes: [Session 13](retries.md) adds bounded queued-handler retries;
+the stable-key/provider contract and single-JVM fake-provider limitation below still apply.
+
 | Term | Contract |
 | --- | --- |
 | At-least-once | A task can execute again after an unrecorded outcome and lease reclamation |

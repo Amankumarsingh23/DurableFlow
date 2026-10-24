@@ -71,8 +71,8 @@ public class ActivityExecutionEntity {
         completedAt = now;
     }
 
-    /** A new ownership attempt is not a RUNNING -> PENDING lifecycle reset. */
-    public void recordReclaimedAttempt(Instant databaseNow) {
+    /** A reclaimed or scheduled execution is not a RUNNING -> PENDING lifecycle reset. */
+    public void startNextAttempt(Instant databaseNow) {
         requireStatus(ActivityExecutionStatus.RUNNING);
         attemptCount = Math.incrementExact(attemptCount);
         updatedAt = databaseNow;
@@ -84,6 +84,12 @@ public class ActivityExecutionEntity {
         status = ActivityExecutionStatus.FAILED;
         updatedAt = now;
         completedAt = now;
+    }
+
+    public void recordRetryFailure(String message, Instant databaseNow) {
+        requireStatus(ActivityExecutionStatus.RUNNING);
+        errorMessage = java.util.Objects.requireNonNull(message);
+        updatedAt = databaseNow;
     }
 
     private void requireStatus(ActivityExecutionStatus expected) {

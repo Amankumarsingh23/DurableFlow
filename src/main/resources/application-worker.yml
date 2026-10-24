@@ -8,3 +8,8 @@ durableflow:
     poll-delay-ms: ${WORKER_POLL_DELAY_MS:500}
     lease-duration-ms: ${WORKER_LEASE_DURATION_MS:30000}
     heartbeat-interval-ms: ${WORKER_HEARTBEAT_INTERVAL_MS:10000}
+    retry:
+      max-attempts: ${WORKER_RETRY_MAX_ATTEMPTS:3}
+      initial-delay-ms: ${WORKER_RETRY_INITIAL_DELAY_MS:1000}
+      multiplier: ${WORKER_RETRY_MULTIPLIER:2}
+      max-delay-ms: ${WORKER_RETRY_MAX_DELAY_MS:30000}
