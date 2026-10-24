@@ -1,0 +1,9 @@
+{
+  "name": "PaymentWaitShipment",
+  "version": 1,
+  "steps": [
+    {"id": "payment", "type": "ACTIVITY", "activity": "chargePayment"},
+    {"id": "wait", "type": "TIMER", "delayMillis": 10000, "dependsOn": ["payment"]},
+    {"id": "shipment", "type": "ACTIVITY", "activity": "createShipment", "dependsOn": ["wait"]}
+  ]
+}

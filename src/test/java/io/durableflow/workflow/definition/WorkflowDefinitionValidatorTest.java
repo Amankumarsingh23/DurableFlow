@@ -33,6 +33,34 @@ class WorkflowDefinitionValidatorTest {
     }
 
     @Test
+    void acceptsMixedNodesAndRoundTripsBothFormats() {
+        var timer = new StepDefinition("wait", null, List.of("payment"), NodeType.TIMER, 86400000L);
+        var normalized = validator.normalizeAndValidate(request(List.of(step("payment"), timer, step("shipment", "wait"))));
+        assertThat(WorkflowDefinitionDocument.steps(WorkflowDefinitionDocument.encode(normalized))).isEqualTo(normalized.steps());
+        var old = java.util.Map.<String, Object>of("steps", List.of(java.util.Map.of(
+                "id", "payment", "activity", "chargePayment", "dependsOn", List.of())));
+        assertThat(WorkflowDefinitionDocument.steps(old).getFirst().type()).isEqualTo(NodeType.ACTIVITY);
+    }
+
+    @Test
+    void rejectsInvalidTimerDurationsAmbiguousNodesAndMixedCycles() {
+        for (Long delay : java.util.Arrays.asList(null, 0L, -1L, Long.MAX_VALUE)) {
+            assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                    new StepDefinition("wait", null, List.of(), NodeType.TIMER, delay)))))
+                    .isInstanceOf(ApiException.class);
+        }
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                new StepDefinition("wait", "chargePayment", List.of(), NodeType.TIMER, 1000L)))))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                new StepDefinition("A", "chargePayment", List.of(), NodeType.ACTIVITY, 1000L)))))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                step("A", "wait"), new StepDefinition("wait", null, List.of("A"), NodeType.TIMER, 1000L)))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("cycle");
+    }
+
+    @Test
     void acceptsSequentialWorkflow() {
         assertThat(validator.normalizeAndValidate(request(List.of(
                 step("payment"), step("inventory", "payment"), step("shipment", "inventory")))).steps())

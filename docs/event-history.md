@@ -1,5 +1,8 @@
 # Session 15: append-only execution history
 
+[Session 16](durable-timers.md) extends this vocabulary with TIMER_SCHEDULED and TIMER_FIRED;
+timer identity is carried in metadata because timers have no ActivityExecution row.
+
 Current state answers **what is true now?** Event history answers **how did we get here?**
 DurableFlow now stores operational snapshots plus an append-only audit/debugging history.
 Snapshots remain authoritative for scheduling, claiming, retrying and recovery. This is

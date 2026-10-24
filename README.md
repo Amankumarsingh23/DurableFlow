@@ -578,3 +578,31 @@ This remains snapshot operational state plus audit history, not full event sourc
 deterministic replay. Session 15 is implemented and statically checked. Compilation,
 migrations, tests, startup and the history API demo remain runtime unverified because
 Java, Maven and Docker are unavailable here.
+
+## Session 16: durable timers
+
+Definitions now support ACTIVITY and TIMER nodes. Missing type remains ACTIVITY for older
+definitions. TIMER uses positive delayMillis and needs no handler, ActivityExecution,
+worker task, lease or heartbeat. A persisted absolute PostgreSQL deadline survives restart
+without restarting the wait. See [timer design and demo](docs/durable-timers.md).
+
+V7 adds workflow_timer with unique logical timer per run, status/deadline constraints and
+a WAITING partial index. V1–V6 are unchanged. Advancement schedules eligible timers once;
+the server-only poller fires due timers with FOR UPDATE SKIP LOCKED and advances their
+workflows in the same transaction. Waiting timers block downstream nodes and completion.
+History adds TIMER_SCHEDULED/TIMER_FIRED, and GET run adds current timers alongside activities.
+
+Configure TIMER_POLL_DELAY_MS (default 500ms) and TIMER_POLLING_ENABLED. Workers never run
+the timer poller. Shutdown gates new polling; unfinished transactions recover through
+PostgreSQL rollback. Legacy synchronous execute rejects timer workflows; use /advance.
+
+```powershell
+mvn "-Dtest=WorkflowDefinitionValidatorTest,TimerPollingConfigurationTest" test
+mvn "-Dtest=DurableTimerIntegrationTest,WorkflowHistoryIntegrationTest,PostgresTaskQueueIntegrationTest" test
+mvn verify
+```
+
+The ten-second example is [payment-wait-shipment-v1.json](examples/payment-wait-shipment-v1.json).
+Session 16 is implemented and statically checked. Compilation, migrations, tests, startup
+and the timer demo remain runtime unverified because Java, Maven and Docker are unavailable.
+No external signals, human approval or cancellation are added.

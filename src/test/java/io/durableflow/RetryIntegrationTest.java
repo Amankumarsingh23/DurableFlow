@@ -51,7 +51,7 @@ class RetryIntegrationTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void clean() { jdbc.execute("TRUNCATE workflow_event, activity_task, activity_execution, workflow_run, workflow_definition"); }
+    void clean() { jdbc.execute("TRUNCATE workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition"); }
 
     @Test
     void transientFailuresPersistDelayedRetriesThenSucceedWithOneEffectAndStableKey() {

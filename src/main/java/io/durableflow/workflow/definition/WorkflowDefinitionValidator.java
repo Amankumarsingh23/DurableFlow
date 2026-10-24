@@ -16,9 +16,20 @@ public class WorkflowDefinitionValidator {
         if (request == null || !validator.validate(request).isEmpty()) {
             throw invalid("Name, positive version and nonempty valid steps are required");
         }
+        for (var step : request.steps()) {
+            if (step.type() == NodeType.ACTIVITY) {
+                if (step.activity() == null || step.activity().isBlank() || step.delayMillis() != null) {
+                    throw invalid("ACTIVITY requires activity and must not specify delayMillis");
+                }
+            } else if (step.delayMillis() == null || step.delayMillis() <= 0
+                    || step.delayMillis() > 3_155_760_000_000L
+                    || (step.activity() != null && !step.activity().isBlank())) {
+                throw invalid("TIMER requires a positive delayMillis of at most 100 years and no activity handler");
+            }
+        }
         var steps = request.steps().stream()
-                .map(step -> new StepDefinition(step.id().strip(), step.activity().strip(),
-                        step.dependsOn().stream().map(String::strip).distinct().toList()))
+                .map(step -> new StepDefinition(step.id().strip(), step.type() == NodeType.ACTIVITY ? step.activity().strip() : null,
+                        step.dependsOn().stream().map(String::strip).distinct().toList(), step.type(), step.delayMillis()))
                 .toList();
         var normalized = new RegisterWorkflowDefinitionRequest(request.name().strip(), request.version(), steps);
         validateGraph(steps);
