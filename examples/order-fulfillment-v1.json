@@ -1,0 +1,9 @@
+{
+  "name": "OrderFulfillment",
+  "version": 1,
+  "steps": [
+    {"id": "payment", "activity": "chargePayment", "dependsOn": []},
+    {"id": "inventory", "activity": "reserveInventory", "dependsOn": ["payment"]},
+    {"id": "shipment", "activity": "createShipment", "dependsOn": ["inventory"]}
+  ]
+}

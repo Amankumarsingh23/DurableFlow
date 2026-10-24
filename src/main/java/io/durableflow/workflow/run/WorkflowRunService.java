@@ -1,0 +1,73 @@
+package io.durableflow.workflow.run;
+
+import io.durableflow.api.ApiException;
+import io.durableflow.workflow.activity.*;
+import io.durableflow.workflow.definition.*;
+import jakarta.validation.Validator;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.Instant;
+import java.util.UUID;
+
+@Service
+public class WorkflowRunService {
+    private final WorkflowDefinitionService definitions;
+    private final WorkflowDefinitionRepository definitionRepository;
+    private final WorkflowRunRepository runs;
+    private final ActivityExecutionRepository activities;
+    private final Validator validator;
+
+    public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
+                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator) {
+        this.definitions = definitions;
+        this.definitionRepository = definitionRepository;
+        this.runs = runs;
+        this.activities = activities;
+        this.validator = validator;
+    }
+
+    @Transactional
+    public WorkflowRunResponse start(StartWorkflowRunRequest request) {
+        if (request == null || !validator.validate(request).isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Workflow name, positive version and input object are required");
+        }
+        var definition = definitions.get(request.workflowName().strip(), request.version());
+        Instant now = Instant.now();
+        var run = new WorkflowRunEntity();
+        run.setWorkflowDefinitionId(definition.id());
+        run.setStatus(WorkflowRunStatus.RUNNING);
+        run.setInputJson(request.input());
+        run.setCreatedAt(now);
+        run.setUpdatedAt(now);
+        run.setStartedAt(now);
+        runs.saveAndFlush(run);
+
+        var executions = definition.steps().stream().map(step -> {
+            var execution = new ActivityExecutionEntity();
+            execution.setWorkflowRunId(run.getId());
+            execution.setActivityId(step.id());
+            execution.setStatus(ActivityExecutionStatus.PENDING);
+            execution.setAttemptCount(0);
+            execution.setCreatedAt(now);
+            execution.setUpdatedAt(now);
+            return execution;
+        }).toList();
+        // Every insert, including the run above, belongs to this transaction.
+        activities.saveAllAndFlush(executions);
+        return new WorkflowRunResponse(run.getId(), definition.name(), definition.version(), run.getStatus(),
+                run.getInputJson(), executions.stream()
+                        .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus())).toList());
+    }
+
+    @Transactional(readOnly = true)
+    public WorkflowRunResponse get(UUID runId) {
+        var run = runs.findById(runId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Workflow run not found"));
+        var definition = definitionRepository.findById(run.getWorkflowDefinitionId()).orElseThrow();
+        var states = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId).stream()
+                .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus())).toList();
+        return new WorkflowRunResponse(run.getId(), definition.getName(), definition.getVersion(),
+                run.getStatus(), run.getInputJson(), states);
+    }
+}

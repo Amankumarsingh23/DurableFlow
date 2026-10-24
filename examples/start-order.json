@@ -1,0 +1,5 @@
+{
+  "workflowName": "OrderFulfillment",
+  "version": 1,
+  "input": {"orderId": "ORD-42"}
+}
