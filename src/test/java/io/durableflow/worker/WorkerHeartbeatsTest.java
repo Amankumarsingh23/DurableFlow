@@ -88,8 +88,9 @@ class WorkerHeartbeatsTest {
                 return Map.of("result", "late");
             }
         }));
-        try (var heartbeats = heartbeats()) {
-            var worker = new TaskWorker(transactions, registry, orchestrator, new WorkerIdentity("A"), heartbeats);
+        var settings = new WorkerExecutionSettings(60000, 1000);
+        try (var heartbeats = heartbeats(); var executions = new HandlerExecutions(settings)) {
+            var worker = new TaskWorker(transactions, registry, orchestrator, new WorkerIdentity("A"), heartbeats, executions, settings);
             assertThatThrownBy(worker::runOne).isInstanceOf(OwnershipLostException.class);
             verify(transactions, never()).complete(any(), any());
             verify(transactions, never()).fail(any(), any());
@@ -99,6 +100,37 @@ class WorkerHeartbeatsTest {
             assertThat(worker.runOne()).isFalse();
             verify(transactions, times(1)).claim("A");
         }
+    }
+
+    @Test
+    void timedOutAttemptStopsHeartbeatAndUsesExistingFailurePipeline() throws Exception {
+        when(transactions.claim("A")).thenReturn(Optional.of(claim));
+        var entered = new CountDownLatch(1);
+        var settings = new WorkerExecutionSettings(1000, 0);
+        var executor = Executors.newSingleThreadExecutor();
+        var registry = new ActivityRegistry(List.of(new ActivityHandler() {
+            public String type() { return "demo"; }
+            public Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input) throws Exception {
+                entered.countDown();
+                new CountDownLatch(1).await();
+                return Map.of();
+            }
+        }));
+        try (var heartbeats = heartbeats();
+             var executions = new HandlerExecutions(settings, executor, (future, millis) -> {
+                 assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue(); throw new TimeoutException();
+             })) {
+            var orchestrator = mock(WorkflowTaskOrchestrator.class);
+            var worker = new TaskWorker(transactions, registry, orchestrator, new WorkerIdentity("A"), heartbeats, executions, settings);
+            assertThat(worker.runOne()).isTrue();
+            verify(transactions).handleFailure(eq(claim), isA(io.durableflow.worker.retry.ActivityTimeoutException.class));
+            tick.getValue().run(); // A scheduled callback racing after closure cannot renew the old claim.
+            verify(transactions, never()).heartbeat(any());
+            verify(transactions, never()).complete(any(), any());
+            verifyNoInteractions(orchestrator);
+            worker.stop();
+            assertThat(worker.runOne()).isFalse();
+        } finally { executor.shutdownNow(); }
     }
 
     @Test

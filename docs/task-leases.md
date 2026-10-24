@@ -2,6 +2,8 @@
 
 Session 11 checkpoint notes: [Session 13](retries.md) adds scheduled READY/RUNNING retries,
 attempt budgets and V5. Its policy supersedes the no-ordinary-retry statements below.
+[Session 14](activity-timeouts.md) adds supervised attempt deadlines and heartbeat-preserving
+shutdown drain, superseding the immediate-abandonment shutdown description below.
 
 Session 11 supersedes the abandoned-claim limitation in the Session 10 queue notes.
 PostgreSQL remains the durable source of truth. Handlers execute outside transactions.

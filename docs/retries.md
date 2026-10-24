@@ -1,5 +1,8 @@
 # Session 13: durable bounded retries
 
+Session 13 checkpoint notes: [Session 14](activity-timeouts.md) adds queued attempt
+deadlines and graceful drain, superseding the no-handler-timeout boundary below.
+
 The queued worker path now retries explicitly transient handler failures. Legacy local
 development execution remains fail-fast. PostgreSQL holds the schedule; no thread sleeps
 or in-memory retry timer is used. Session 10–12 claiming, leases, heartbeats, fencing and

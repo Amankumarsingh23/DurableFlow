@@ -522,3 +522,33 @@ mvn verify
 Session 13 is implemented and statically checked. Compilation, migration execution,
 tests, startup and worker demos remain unverified because Java, Maven and Docker are
 unavailable. The fake provider's single-JVM limitation still applies.
+
+## Session 14: activity timeouts and graceful worker shutdown
+
+Queued handlers now run under dedicated bounded supervision. The default per-attempt
+deadline is 60000ms, independent of the lease duration. Timeout raises an explicit
+retryable ActivityTimeoutException and uses the existing fenced retry/budget pipeline.
+Interruption is cooperative: late results are discarded, and external work may continue.
+A non-cooperative handler retains its one local execution slot; other workers can recover
+the durable task without this process creating unbounded replacement threads.
+
+Shutdown closes the claim gate, drains active work for up to 10000ms while maintaining
+heartbeats, then closes execution/heartbeat infrastructure. Grace exhaustion abandons
+unfinished claims for lease expiry rather than failing them solely because of shutdown.
+Configure WORKER_EXECUTION_TIMEOUT_MS and WORKER_SHUTDOWN_GRACE_MS or corresponding
+durableflow.worker properties. V1–V5 are unchanged; no schema changes are needed.
+
+[Activity timeout and shutdown notes](docs/activity-timeouts.md) explain cancellation
+limits, network timeouts, configuration and test/demo procedures. Earlier session notes
+describe historical checkpoints; Session 14 supersedes their no-attempt-timeout and
+immediate-shutdown-abandonment statements for queued workers.
+
+```powershell
+mvn "-Dtest=HandlerExecutionsTest,WorkerHeartbeatsTest" test
+mvn "-Dtest=TimeoutShutdownIntegrationTest,RetryIntegrationTest,TaskLeaseIntegrationTest,PaymentIdempotencyIntegrationTest,PostgresTaskQueueIntegrationTest" test
+mvn verify
+```
+
+Session 14 is implemented and statically checked. Compilation, migrations/startup, tests
+and timeout/shutdown demos remain runtime unverified because Java, Maven and Docker are
+unavailable. No workflow cancellation or compensation is added.

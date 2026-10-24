@@ -42,6 +42,8 @@ class PaymentIdempotencyIntegrationTest {
     @Autowired ActivityRegistry registry;
     @Autowired FakePaymentProvider provider;
     @Autowired WorkerHeartbeats heartbeats;
+    @Autowired HandlerExecutions executions;
+    @Autowired WorkerExecutionSettings executionSettings;
     @Autowired JdbcTemplate jdbc;
 
     @Test
@@ -99,7 +101,7 @@ class PaymentIdempotencyIntegrationTest {
             }
         };
         var b = new TaskWorker(transactions, new ActivityRegistry(List.of(payment,
-                registry.require("createShipment"))), orchestrator, new WorkerIdentity("B"), heartbeats);
+                registry.require("createShipment"))), orchestrator, new WorkerIdentity("B"), heartbeats, executions, executionSettings);
         assertThat(b.runOne()).isTrue();
         assertThat(seen.get().idempotencyKey()).isEqualTo(contextA.idempotencyKey());
         assertThat(seen.get().activityExecutionId()).isEqualTo(a.activityExecutionId());

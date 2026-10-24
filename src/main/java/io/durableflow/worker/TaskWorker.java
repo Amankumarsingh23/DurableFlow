@@ -10,6 +10,7 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import jakarta.annotation.PreDestroy;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TaskWorker {
@@ -19,26 +20,39 @@ public class TaskWorker {
     private final WorkflowTaskOrchestrator orchestrator;
     private final WorkerIdentity identity;
     private final WorkerHeartbeats heartbeats;
+    private final HandlerExecutions executions;
+    private final WorkerExecutionSettings settings;
     private final Object lifecycle = new Object();
-    private volatile boolean stopping;
+    private boolean draining;
+    private int active;
+    private volatile boolean abandoning;
 
     public TaskWorker(TaskTransactions transactions, ActivityRegistry registry,
-                      WorkflowTaskOrchestrator orchestrator, WorkerIdentity identity, WorkerHeartbeats heartbeats) {
+                      WorkflowTaskOrchestrator orchestrator, WorkerIdentity identity, WorkerHeartbeats heartbeats,
+                      HandlerExecutions executions, WorkerExecutionSettings settings) {
         this.transactions = transactions; this.registry = registry;
         this.orchestrator = orchestrator; this.identity = identity;
         this.heartbeats = heartbeats;
+        this.executions = executions; this.settings = settings;
     }
 
     @Transactional(propagation = Propagation.NEVER)
     public boolean runOne() {
         ClaimedTask claim;
         WorkerHeartbeats.Session session;
+        HandlerExecutions.Ticket ticket;
         synchronized (lifecycle) {
-            if (stopping) return false;
-            var selected = transactions.claim(identity.id());
-            if (selected.isEmpty()) return false;
-            claim = selected.get();
-            session = heartbeats.start(claim);
+            if (draining) return false;
+            var reserved = executions.reserve();
+            if (reserved.isEmpty()) return false;
+            ticket = reserved.get();
+            try {
+                var selected = transactions.claim(identity.id());
+                if (selected.isEmpty()) { ticket.close(); return false; }
+                claim = selected.get();
+                session = heartbeats.start(claim);
+                active++;
+            } catch (RuntimeException failed) { ticket.close(); throw failed; }
         }
         LOG.info("Worker {} executing task {} ({}) for run {}", identity.id(), claim.taskId(), claim.activityType(), claim.runId());
         Map<String, Object> output = null;
@@ -46,16 +60,18 @@ public class TaskWorker {
         try {
             try {
                 session.ensureOwned();
-                output = Objects.requireNonNull(registry.require(claim.activityType()).execute(
+                output = ticket.execute(() -> Objects.requireNonNull(registry.require(claim.activityType()).execute(
                         new ActivityExecutionContext(claim.runId(), claim.activityExecutionId()), claim.input()),
-                        "Activity output must be a JSON object");
+                        "Activity output must be a JSON object"));
+            } catch (HandlerExecutions.Abandoned cancelled) {
+                throw new OwnershipLostException(claim);
             } catch (Exception failure) {
                 handlerFailure = failure;
             } finally {
-                session.close(); // No renewal after handler termination; final write still verifies DB ownership.
+                session.close(); // Stop renewal after result/timeout/abandonment, even if external work continues.
             }
             session.ensureOwned();
-            if (stopping) throw new OwnershipLostException(claim);
+            if (abandoning) throw new OwnershipLostException(claim);
             if (handlerFailure != null) {
                 transactions.handleFailure(claim, handlerFailure);
                 return true;
@@ -69,7 +85,8 @@ public class TaskWorker {
             throw lost;
         } finally {
             session.close();
-            if (handlerFailure instanceof InterruptedException) Thread.currentThread().interrupt();
+            ticket.close();
+            synchronized (lifecycle) { active--; lifecycle.notifyAll(); }
         }
     }
 
@@ -78,7 +95,24 @@ public class TaskWorker {
 
     @PreDestroy
     public void stop() {
-        synchronized (lifecycle) { stopping = true; }
+        synchronized (lifecycle) {
+            if (draining) return;
+            draining = true; // Claim gate closes before any drain or executor teardown.
+            long remaining = TimeUnit.MILLISECONDS.toNanos(settings.shutdownGraceMillis());
+            long last = System.nanoTime();
+            while (active > 0 && remaining > 0) {
+                try { TimeUnit.NANOSECONDS.timedWait(lifecycle, remaining); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); break; }
+                long now = System.nanoTime();
+                remaining -= now - last;
+                last = now;
+            }
+            abandoning = true;
+        }
+        executions.close();
         heartbeats.close();
     }
+
+    // Package-local lifecycle observations for deterministic shutdown tests.
+    boolean isDraining() { synchronized (lifecycle) { return draining; } }
 }

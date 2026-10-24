@@ -46,6 +46,8 @@ class RetryIntegrationTest {
     @Autowired ActivityExecutionRepository activities;
     @Autowired ActivityTaskRepository tasks;
     @Autowired WorkerHeartbeats heartbeats;
+    @Autowired HandlerExecutions executions;
+    @Autowired WorkerExecutionSettings executionSettings;
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
@@ -258,7 +260,7 @@ class RetryIntegrationTest {
     }
     private TaskWorker worker(String id, ActivityHandler handler) {
         return new TaskWorker(transactions, new ActivityRegistry(List.of(handler, new CreateShipmentActivity())),
-                orchestrator, new WorkerIdentity(id), heartbeats);
+                orchestrator, new WorkerIdentity(id), heartbeats, executions, executionSettings);
     }
     @FunctionalInterface
     interface Body { Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input); }

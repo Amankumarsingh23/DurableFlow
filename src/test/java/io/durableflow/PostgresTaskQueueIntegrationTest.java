@@ -53,6 +53,8 @@ class PostgresTaskQueueIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired ActivityRegistry serverRegistry;
     @Autowired WorkerHeartbeats heartbeats;
+    @Autowired HandlerExecutions executions;
+    @Autowired WorkerExecutionSettings executionSettings;
 
     @BeforeEach
     void resetIsolatedTestDatabase() {
@@ -358,7 +360,7 @@ class PostgresTaskQueueIntegrationTest {
     }
 
     private TaskWorker worker(String id, List<ActivityHandler> handlers) {
-        return new TaskWorker(transactions, new ActivityRegistry(handlers), orchestrator, new WorkerIdentity(id), heartbeats);
+        return new TaskWorker(transactions, new ActivityRegistry(handlers), orchestrator, new WorkerIdentity(id), heartbeats, executions, executionSettings);
     }
 
     private <T> List<T> race(Callable<T> a, Callable<T> b) throws Exception {
