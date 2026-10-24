@@ -4,6 +4,7 @@ import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.engine.WorkflowEngine;
+import io.durableflow.workflow.engine.OrphanedActivityException;
 import io.durableflow.workflow.run.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +85,45 @@ class WorkflowEngineIntegrationTest {
     }
 
     @Test
+    void executionBudgetStopsBeforeClaimingMoreWorkAndCanFinalizeAtExactLimit() {
+        probe.dependencies = Map.of("recordB", List.of("A"));
+        var run = start(List.of(step("B", "recordB", "A"), step("A", "recordA")));
+        var paused = engine.executeRun(run.runId(), 1);
+        assertThat(paused.status()).isEqualTo(WorkflowRunStatus.RUNNING);
+        assertThat(probe.calls).containsExactly("recordA");
+        var pending = activities.findByWorkflowRunIdOrderByActivityIdAsc(run.runId()).get(1);
+        assertThat(pending.getActivityId()).isEqualTo("B");
+        assertThat(pending.getStatus()).isEqualTo(ActivityExecutionStatus.PENDING);
+        assertThat(pending.getStartedAt()).isNull();
+        assertThat(pending.getAttemptCount()).isZero();
+        assertCompleted(engine.executeRun(run.runId(), 1));
+        assertThat(probe.calls).containsExactly("recordA", "recordB");
+    }
+
+    @Test
+    void invalidExecutionBudgetDoesNotChangeDurableState() {
+        var run = start(List.of(step("A", "recordA")));
+        assertThatThrownBy(() -> engine.executeRun(run.runId(), 0)).isInstanceOf(ApiException.class)
+                .hasMessageContaining("positive");
+        assertThatThrownBy(() -> engine.executeRun(run.runId(), -1)).isInstanceOf(ApiException.class);
+        assertThat(probe.calls).isEmpty();
+        var row = activities.findByWorkflowRunIdOrderByActivityIdAsc(run.runId()).getFirst();
+        assertThat(row.getStatus()).isEqualTo(ActivityExecutionStatus.PENDING);
+        assertThat(row.getAttemptCount()).isZero();
+    }
+
+    @Test
+    void persistedFailedActivityIsNeverRetriedDuringRecovery() {
+        var run = start(List.of(step("A", "recordA"), step("B", "recordB", "A")));
+        jdbc.update("UPDATE activity_execution SET status = 'FAILED', error_message = 'previous failure' "
+                + "WHERE workflow_run_id = ? AND activity_id = 'A'", run.runId());
+        assertThatThrownBy(() -> engine.executeRun(run.runId())).isInstanceOf(ApiException.class)
+                .hasMessageContaining("automatic retry is disabled");
+        assertThat(runService.get(run.runId()).status()).isEqualTo(WorkflowRunStatus.FAILED);
+        assertThat(probe.calls).isEmpty();
+    }
+
+    @Test
     void missingHandlerRecordsControlledFailureAndDoesNotExecuteDependents() {
         var run = start(List.of(step("missing", "unregistered"), step("blocked", "recordA", "missing")));
         var result = engine.executeRun(run.runId());
@@ -104,12 +144,14 @@ class WorkflowEngineIntegrationTest {
     }
 
     @Test
-    void interruptedStateFailsClearlyWithoutSpinningOrReexecuting() {
+    void interruptedStateRequiresRecoveryWithoutChangingItsUncertainOutcome() {
         var run = start(List.of(step("A", "recordA")));
         jdbc.update("UPDATE activity_execution SET status = 'RUNNING' WHERE workflow_run_id = ?", run.runId());
-        assertThatThrownBy(() -> engine.executeRun(run.runId())).isInstanceOf(ApiException.class)
-                .hasMessageContaining("recovery is not implemented");
-        assertThat(runs.findById(run.runId()).orElseThrow().getStatus()).isEqualTo(WorkflowRunStatus.FAILED);
+        assertThatThrownBy(() -> engine.executeRun(run.runId())).isInstanceOf(OrphanedActivityException.class)
+                .hasMessageContaining("cannot safely determine");
+        assertThat(runs.findById(run.runId()).orElseThrow().getStatus()).isEqualTo(WorkflowRunStatus.RUNNING);
+        assertThat(activities.findByWorkflowRunIdOrderByActivityIdAsc(run.runId()).getFirst().getStatus())
+                .isEqualTo(ActivityExecutionStatus.RUNNING);
         assertThat(probe.calls).isEmpty();
     }
 

@@ -35,9 +35,17 @@ public class WorkflowEngineState {
     public record Work(UUID activityExecutionId, String activityType, Map<String, Object> input) {}
     public record Decision(Work work, String error) {}
 
-    /** Reload durable state, then start one activity, finish, or report a failure. */
-    public Decision next(UUID runId) {
+    /** Reload durable state; allowStart=false checks/finalizes the run without claiming another activity. */
+    public Decision next(UUID runId, boolean allowStart) {
         var run = running(runId);
+        var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId);
+        var uncertain = rows.stream().filter(row -> row.getStatus() == ActivityExecutionStatus.RUNNING)
+                .map(ActivityExecutionEntity::getActivityId).toList();
+        if (!uncertain.isEmpty()) {
+            // Uncertainty takes priority, even over other corrupt state. Never invent a terminal outcome.
+            // No entity has been changed; rollback preserves every existing checkpoint.
+            throw new OrphanedActivityException(runId, uncertain);
+        }
         var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
         List<StepDefinition> steps;
         try {
@@ -47,7 +55,6 @@ public class WorkflowEngineState {
         } catch (RuntimeException invalidDefinition) {
             return noProgress(run, "Stored workflow definition is invalid");
         }
-        var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId);
         var byId = rows.stream().collect(Collectors.toMap(ActivityExecutionEntity::getActivityId, Function.identity()));
         Set<String> expectedIds = steps.stream().map(StepDefinition::id).collect(Collectors.toSet());
         if (!byId.keySet().equals(expectedIds)) {
@@ -57,11 +64,11 @@ public class WorkflowEngineState {
             run.markCompleted(clock.instant());
             return new Decision(null, null);
         }
-        // Session 7 deliberately does not recover interrupted executions or retry failures.
-        if (rows.stream().anyMatch(row -> row.getStatus() == ActivityExecutionStatus.RUNNING
-                || row.getStatus() == ActivityExecutionStatus.FAILED)) {
-            return noProgress(run, "Run contains interrupted or failed activity state; recovery is not implemented");
+        if (rows.stream().anyMatch(row -> row.getStatus() == ActivityExecutionStatus.FAILED)) {
+            return noProgress(run, "Run contains a failed activity; automatic retry is disabled");
         }
+        // Temporary dev/test budget: stop only at a committed checkpoint, before claiming more work.
+        if (!allowStart) return new Decision(null, null);
         for (var step : steps) {
             var row = byId.get(step.id());
             boolean eligible = row.getStatus() == ActivityExecutionStatus.PENDING

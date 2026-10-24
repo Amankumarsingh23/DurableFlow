@@ -1,6 +1,9 @@
 package io.durableflow.api;
 
 import jakarta.validation.ConstraintViolationException;
+import io.durableflow.workflow.engine.OrphanedActivityException;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +15,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 @RestControllerAdvice
 public class ApiErrorHandler {
@@ -19,13 +23,23 @@ public class ApiErrorHandler {
 
     public record ApiError(int status, String message) {}
 
+    public record RecoveryError(int status, String message, String code, UUID runId, List<String> activityIds) {}
+
+    @ExceptionHandler(OrphanedActivityException.class)
+    ResponseEntity<RecoveryError> recoveryRequired(OrphanedActivityException exception) {
+        LOG.warn("Recovery required for workflow run {}: uncertain activities {}", exception.runId(), exception.activityIds());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new RecoveryError(409, exception.getMessage(),
+                "RECOVERY_REQUIRED", exception.runId(), exception.activityIds()));
+    }
+
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ApiError> domain(ApiException exception) {
         return error(exception.status(), exception.getMessage());
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class,
-            HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+            HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class})
     ResponseEntity<ApiError> invalidRequest(Exception exception) {
         return error(HttpStatus.BAD_REQUEST, "Invalid request body or parameter");
     }
