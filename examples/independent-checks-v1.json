@@ -1,0 +1,9 @@
+{
+  "name": "IndependentChecks",
+  "version": 1,
+  "steps": [
+    {"id": "payment", "activity": "chargePayment", "dependsOn": []},
+    {"id": "inventory", "activity": "reserveInventory", "dependsOn": []},
+    {"id": "shipment", "activity": "createShipment", "dependsOn": ["payment", "inventory"]}
+  ]
+}

@@ -3,9 +3,11 @@ package io.durableflow.workflow.run;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
 import java.util.UUID;
 
 @RestController
+@Profile("!worker")
 @RequestMapping("/api/workflow-runs")
 public class WorkflowRunController {
     private final WorkflowRunService service;

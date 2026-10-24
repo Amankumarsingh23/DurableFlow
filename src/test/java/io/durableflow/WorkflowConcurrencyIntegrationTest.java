@@ -125,8 +125,8 @@ class WorkflowConcurrencyIntegrationTest {
         };
         var registry = new ActivityRegistry(List.of(handler));
         // Separate objects have separate in-memory guards; the DB must supply the coordination.
-        var engineA = new WorkflowEngine(state, registry, runService);
-        var engineB = new WorkflowEngine(state, registry, runService);
+        var engineA = new WorkflowLocalExecutor(state, registry, runService);
+        var engineB = new WorkflowLocalExecutor(state, registry, runService);
         var executor = Executors.newFixedThreadPool(2);
         try {
             var a = executor.submit(() -> execute(engineA, run.runId(), startTogether, loserExited));
@@ -216,7 +216,7 @@ class WorkflowConcurrencyIntegrationTest {
     private record Claim(WorkflowEngineState.Work work, OrphanedActivityException conflict) {}
     private record Execution(WorkflowRunResponse response, ApiException conflict) {}
 
-    private Execution execute(WorkflowEngine engine, UUID runId, CyclicBarrier barrier, CountDownLatch loserExited) {
+    private Execution execute(WorkflowLocalExecutor engine, UUID runId, CyclicBarrier barrier, CountDownLatch loserExited) {
         await(barrier);
         try {
             return new Execution(engine.executeRun(runId), null);

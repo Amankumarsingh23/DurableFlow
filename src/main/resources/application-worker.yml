@@ -1,0 +1,8 @@
+spring:
+  main:
+    web-application-type: none
+durableflow:
+  worker:
+    id: ${WORKER_ID:}
+    polling-enabled: ${WORKER_POLLING_ENABLED:true}
+    poll-delay-ms: ${WORKER_POLL_DELAY_MS:500}

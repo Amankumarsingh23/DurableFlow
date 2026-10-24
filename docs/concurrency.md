@@ -1,5 +1,9 @@
 # Session 9: coordinating checkpoint transactions
 
+Session 10 retains this local checkpoint protocol in WorkflowLocalExecutor/WorkflowEngineState
+for compatibility. Queue writers additionally lock task -> run; see the newer
+[task queue notes](postgres-task-queue.md) for the complete cross-role lock order.
+
 ## The race in Session 8
 
 Before the Session 9 change, WorkflowEngineState.next read the workflow with findById,

@@ -3,8 +3,10 @@ package io.durableflow.workflow.definition;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
 
 @RestController
+@Profile("!worker")
 @RequestMapping("/api/workflow-definitions")
 public class WorkflowDefinitionController {
     private final WorkflowDefinitionService service;

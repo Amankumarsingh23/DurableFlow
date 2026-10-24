@@ -4,6 +4,7 @@ import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.run.*;
+import io.durableflow.workflow.task.ActivityTaskRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -27,14 +28,17 @@ public class WorkflowEngineState {
     private final ActivityExecutionRepository activities;
     private final WorkflowDefinitionValidator validator;
     private final Clock clock;
+    private final ActivityTaskRepository tasks;
 
     public WorkflowEngineState(WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
-                               ActivityExecutionRepository activities, WorkflowDefinitionValidator validator, Clock clock) {
+                               ActivityExecutionRepository activities, WorkflowDefinitionValidator validator,
+                               Clock clock, ActivityTaskRepository tasks) {
         this.runs = runs;
         this.definitions = definitions;
         this.activities = activities;
         this.validator = validator;
         this.clock = clock;
+        this.tasks = tasks;
     }
 
     public record Work(UUID activityExecutionId, String activityType, Map<String, Object> input) {}
@@ -43,6 +47,9 @@ public class WorkflowEngineState {
     /** Reload durable state; allowStart=false checks/finalizes the run without claiming another activity. */
     public Decision next(UUID runId, boolean allowStart) {
         var run = running(runId);
+        if (!tasks.findByRunId(runId).isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "Run has queued tasks; use task workers and advance instead");
+        }
         var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId);
         var uncertain = rows.stream().filter(row -> row.getStatus() == ActivityExecutionStatus.RUNNING)
                 .map(ActivityExecutionEntity::getActivityId).toList();

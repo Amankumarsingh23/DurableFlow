@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 /** Temporary manual checkpoint facility; unavailable unless the dev profile is explicitly enabled. */
-@Profile("dev")
+@Profile("dev & !worker")
 @RestController
 @RequestMapping("/api/dev/workflow-runs")
 public class WorkflowDevelopmentController {
