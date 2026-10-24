@@ -52,6 +52,7 @@ class PostgresTaskQueueIntegrationTest {
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired JdbcTemplate jdbc;
     @Autowired ActivityRegistry serverRegistry;
+    @Autowired WorkerHeartbeats heartbeats;
 
     @BeforeEach
     void resetIsolatedTestDatabase() {
@@ -255,7 +256,8 @@ class PostgresTaskQueueIntegrationTest {
         var run = start(List.of(step("A", "unregistered")));
         engine.advanceRun(run.runId());
         var claim = transactions.claim("owner").orElseThrow();
-        var wrong = new ClaimedTask(claim.taskId(), claim.runId(), claim.activityExecutionId(), claim.activityType(), claim.input(), "other");
+        var wrong = new ClaimedTask(claim.taskId(), claim.runId(), claim.activityExecutionId(), claim.activityType(),
+                claim.input(), "other", claim.leaseGeneration(), claim.leaseExpiresAt());
         assertThatThrownBy(() -> transactions.complete(wrong, Map.of())).isInstanceOf(ApiException.class);
         assertThat(tasks.findById(claim.taskId()).orElseThrow().getStatus()).isEqualTo(ActivityTaskStatus.CLAIMED);
         transactions.fail(claim, "controlled owner failure");
@@ -356,7 +358,7 @@ class PostgresTaskQueueIntegrationTest {
     }
 
     private TaskWorker worker(String id, List<ActivityHandler> handlers) {
-        return new TaskWorker(transactions, new ActivityRegistry(handlers), orchestrator, new WorkerIdentity(id));
+        return new TaskWorker(transactions, new ActivityRegistry(handlers), orchestrator, new WorkerIdentity(id), heartbeats);
     }
 
     private <T> List<T> race(Callable<T> a, Callable<T> b) throws Exception {

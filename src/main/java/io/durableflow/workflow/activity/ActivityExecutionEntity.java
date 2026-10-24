@@ -71,6 +71,13 @@ public class ActivityExecutionEntity {
         completedAt = now;
     }
 
+    /** A new ownership attempt is not a RUNNING -> PENDING lifecycle reset. */
+    public void recordReclaimedAttempt(Instant databaseNow) {
+        requireStatus(ActivityExecutionStatus.RUNNING);
+        attemptCount = Math.incrementExact(attemptCount);
+        updatedAt = databaseNow;
+    }
+
     public void markFailed(String message, Instant now) {
         requireStatus(ActivityExecutionStatus.RUNNING);
         errorMessage = java.util.Objects.requireNonNull(message);

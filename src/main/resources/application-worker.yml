@@ -6,3 +6,5 @@ durableflow:
     id: ${WORKER_ID:}
     polling-enabled: ${WORKER_POLLING_ENABLED:true}
     poll-delay-ms: ${WORKER_POLL_DELAY_MS:500}
+    lease-duration-ms: ${WORKER_LEASE_DURATION_MS:30000}
+    heartbeat-interval-ms: ${WORKER_HEARTBEAT_INTERVAL_MS:10000}

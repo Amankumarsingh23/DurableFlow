@@ -1,5 +1,9 @@
 # Session 10: PostgreSQL task queue
 
+This document records the Session 10 checkpoint. Session 11 supersedes its abandoned-claim
+limitation and owner-only validation with [renewable leases and generation checks](task-leases.md).
+The current migration head is V4; the original V3 startup expectation below is historical.
+
 The normal path is now orchestrator -> durable queue -> independent workers.
 There is one Maven artifact, launched either as an HTTP server (default) or a non-web
 worker (worker profile). No broker, event bus or Maven module split was introduced.

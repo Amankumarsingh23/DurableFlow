@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.*;
 import org.springframework.scheduling.annotation.*;
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.context.event.EventListener;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Configuration(proxyBeanMethods = false)
 @Profile("worker")
@@ -17,15 +20,24 @@ public class WorkerPollingConfiguration {
         return new Poller(worker);
     }
 
-    public static class Poller {
+    public static class Poller implements AutoCloseable {
         private static final Logger LOG = LoggerFactory.getLogger(Poller.class);
         private final TaskWorker worker;
+        private final AtomicBoolean stopping = new AtomicBoolean();
         Poller(TaskWorker worker) { this.worker = worker; }
 
         @Scheduled(fixedDelayString = "${durableflow.worker.poll-delay-ms:500}")
         public void poll() {
+            if (stopping.get()) return;
             try { worker.runOne(); }
-            catch (Exception failure) { LOG.error("Worker poll failed; no task retry or reclamation is performed", failure); }
+            catch (OwnershipLostException lost) { LOG.warn("{}", lost.getMessage()); }
+            catch (Exception failure) { LOG.error("Worker poll failed; no ordinary handler retry is performed", failure); }
         }
+
+        @EventListener(ContextClosedEvent.class)
+        public void contextClosed() { close(); }
+
+        @Override
+        public void close() { stopping.set(true); }
     }
 }

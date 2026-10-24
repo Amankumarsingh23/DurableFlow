@@ -3,7 +3,6 @@ package io.durableflow.workflow.task;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-import java.time.Instant;
 import java.util.*;
 
 public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity, UUID> {
@@ -13,17 +12,41 @@ public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity
             + "where t.activityExecutionId = a.id and a.workflowRunId = :runId")
     List<ActivityTaskEntity> findByRunId(@Param("runId") UUID runId);
 
-    /** Selection and READY -> CLAIMED must share the caller's transaction. Lock task rows only. */
+    /** Claim/reclaim and ownership transfer share one transaction. All eligibility times are DB times. */
     @Query(value = """
             SELECT t.* FROM activity_task t
             JOIN activity_execution a ON a.id = t.activity_execution_id
             JOIN workflow_run r ON r.id = a.workflow_run_id
-            WHERE t.status = 'READY' AND t.available_at <= :now
-              AND a.status = 'PENDING' AND r.status = 'RUNNING'
-            ORDER BY t.available_at, t.created_at, t.id
+            WHERE r.status = 'RUNNING' AND (
+                (t.status = 'READY' AND t.available_at <= statement_timestamp() AND a.status = 'PENDING')
+                OR (t.status = 'CLAIMED' AND t.lease_expires_at <= statement_timestamp() AND a.status = 'RUNNING')
+            )
+            ORDER BY CASE WHEN t.status = 'READY' THEN t.available_at ELSE t.lease_expires_at END,
+                     t.created_at, t.id
             LIMIT 1 FOR UPDATE OF t SKIP LOCKED
             """, nativeQuery = true)
-    Optional<ActivityTaskEntity> lockNextReady(@Param("now") Instant now);
+    Optional<ActivityTaskEntity> lockNextClaimable();
+
+    /** No resurrection: a heartbeat arriving after expiry is rejected even if not yet reclaimed. */
+    @Modifying
+    @Query(value = """
+            UPDATE activity_task
+            SET lease_expires_at = clock_timestamp() + CAST(:leaseMillis AS double precision) * INTERVAL '1 millisecond'
+            WHERE id = :taskId AND status = 'CLAIMED' AND worker_id = :workerId
+              AND lease_generation = :generation AND lease_expires_at > clock_timestamp()
+            """, nativeQuery = true)
+    int renewOwned(@Param("taskId") UUID taskId, @Param("workerId") String workerId,
+                   @Param("generation") long generation, @Param("leaseMillis") long leaseMillis);
+
+    /** Last ownership check occurs at the actual write, not at transaction start or before a lock wait. */
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            UPDATE activity_task SET status = :outcome
+            WHERE id = :taskId AND status = 'CLAIMED' AND worker_id = :workerId
+              AND lease_generation = :generation AND lease_expires_at > clock_timestamp()
+            """, nativeQuery = true)
+    int finishOwned(@Param("taskId") UUID taskId, @Param("workerId") String workerId,
+                    @Param("generation") long generation, @Param("outcome") String outcome);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from ActivityTaskEntity t where t.id = :taskId")

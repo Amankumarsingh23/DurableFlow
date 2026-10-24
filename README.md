@@ -2,7 +2,7 @@
 
 A durable workflow orchestration engine built incrementally for learning and SDE interview preparation.
 
-DurableFlow now separates orchestration from activity execution through a durable PostgreSQL task queue. The default server materializes eligible work; independent non-HTTP worker processes claim and execute it with FOR UPDATE SKIP LOCKED. Earlier synchronous development/recovery endpoints remain available for unqueued runs. Runtime verification, the two-worker demo and a manual JVM-crash experiment remain outstanding.
+DurableFlow separates orchestration from activity execution through a durable PostgreSQL task queue. Independent non-HTTP workers use FOR UPDATE SKIP LOCKED, renewable leases and heartbeats; expired claims can be reclaimed, and stale worker results are rejected. Earlier synchronous development/recovery endpoints remain available for unqueued runs. See [Session 11 lease design and verification](docs/task-leases.md). Runtime verification, the two-worker demo and a manual JVM-crash experiment remain outstanding.
 
 ## Prerequisites
 
@@ -399,10 +399,10 @@ Very fast demos do not guarantee fair distribution between workers or both worke
 appearing in a small sample. The locked-head/concurrent-claim tests provide deterministic
 coverage of this capability. This demo is documented, not evidence that it ran here.
 
-If a worker dies after CLAIMED, its task currently stays stuck; there are no leases,
-heartbeats, reclamation, retries or idempotency keys. If it dies after a successful outcome
+At the Session 10 checkpoint, a worker dying after CLAIMED left its task stuck. Session 11
+adds leases, heartbeats and reclamation as described below. If a worker dies after a successful outcome
 but before advancement, repeat POST /advance: completed activities are never rerun.
-Session 11 will address abandoned claims. Stop each application with Ctrl+C and stop
+Stop each application with Ctrl+C and stop
 PostgreSQL with docker compose down, preserving the named volume.
 
 The old /execute and dev-budget endpoints now delegate to WorkflowLocalExecutor solely
@@ -425,3 +425,40 @@ dependency advancement, ownership, an independent non-web worker context and ado
 of persisted partial progress. Existing Session 8/9 suites remain in the full test run.
 Compilation, migrations, tests, server/worker startup and the two-JVM-worker demo remain
 unverified because Java, Maven and Docker are unavailable here.
+
+## Session 11: leases, heartbeats and reclamation
+
+V4 adds lease_expires_at, a monotonic lease_generation and an expired-CLAIMED partial
+index. V1–V3 remain unchanged. Stop older application processes before upgrading:
+historic claims become immediately reclaimable; old binaries cannot enforce leases.
+
+Workers now claim READY or expired CLAIMED tasks under the same SKIP LOCKED transaction.
+Claim/reclaim assigns a fresh DB-time deadline, increments generation, and preserves the
+logical activity ID. Reclamation leaves the activity RUNNING and increments attempt_count.
+Heartbeats renew only the current unexpired owner/generation. Final outcome writes check
+ownership and DB time atomically; rejection rolls back logical changes too.
+
+Worker-profile defaults are a 30000ms lease, 10000ms heartbeat and 500ms polling delay.
+Configure WORKER_LEASE_DURATION_MS, WORKER_HEARTBEAT_INTERVAL_MS and WORKER_POLL_DELAY_MS,
+or the corresponding durableflow.worker properties. Heartbeats must be positive and at
+most one third of the lease. A failed/unconfirmed renewal abandons the local attempt.
+Shutdown stops new claims, cancels heartbeats and leaves leases to expire without resetting
+tasks. Arbitrary external handler work cannot always be cancelled.
+
+Reclamation permits at-least-once execution. The token protects DurableFlow database
+outcomes, including reused worker IDs; arbitrary external effects still need Session 12
+idempotency. Ordinary handler failures remain terminal, with no automatic retry/backoff.
+
+[Lease documentation](docs/task-leases.md) includes the A/B zombie-worker timeline,
+claim SQL, lock/lease distinction, shutdown limitations, configuration, inspection and
+kill/reclaim guidance. New tests cover DB-time ownership, concurrent reclamation,
+late-result rollback, heartbeat cancellation and shutdown without sleep-heavy coordination.
+
+```powershell
+mvn "-Dtest=WorkerHeartbeatsTest,ActivityTaskLifecycleTest" test
+mvn "-Dtest=TaskLeaseIntegrationTest,PostgresTaskQueueIntegrationTest,WorkflowConcurrencyIntegrationTest" test
+mvn verify
+```
+
+Session 11 is implemented and statically checked. Compilation, migrations, all tests,
+startup and process demos remain unverified because Java, Maven and Docker are unavailable.
