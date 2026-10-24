@@ -1,0 +1,9 @@
+{
+  "name": "HumanApproval",
+  "version": 1,
+  "steps": [
+    {"id": "submitRequest", "type": "ACTIVITY", "activity": "submitRequest"},
+    {"id": "managerApproval", "type": "SIGNAL", "dependsOn": ["submitRequest"]},
+    {"id": "finalizeRequest", "type": "ACTIVITY", "activity": "finalizeRequest", "dependsOn": ["managerApproval"]}
+  ]
+}

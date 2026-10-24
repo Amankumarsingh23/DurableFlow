@@ -606,3 +606,32 @@ The ten-second example is [payment-wait-shipment-v1.json](examples/payment-wait-
 Session 16 is implemented and statically checked. Compilation, migrations, tests, startup
 and the timer demo remain runtime unverified because Java, Maven and Docker are unavailable.
 No external signals, human approval or cancellation are added.
+
+## Session 17: durable signals and approval waits
+
+SIGNAL joins ACTIVITY/TIMER in definitions, targeted by exact logical node ID. It needs no
+handler, task, lease or worker thread. V8 adds durable wait and delivery/inbox tables;
+V1–V7 are unchanged. Early deliveries are buffered and consumed when dependencies allow
+the wait to materialize, including across fresh application contexts.
+
+POST /api/workflow-runs/{runId}/signals accepts signalId, signalNodeId and a JSON payload.
+Same ID/target/logical payload returns the existing receipt without duplicate history;
+changed identity/payload returns 409. Each target is single-use. Delivery, consumption,
+history and downstream advancement commit atomically under the run lock. GET run adds
+signalWaits; event history adds SIGNAL_WAIT_STARTED, SIGNAL_RECEIVED and early SIGNAL_BUFFERED.
+
+[Signal design and human-approval demo](docs/durable-signals.md) explains buffering,
+idempotency, restart semantics and security limits. SIGNAL means receipt, not conditional
+approve/reject routing. Production endpoints require authentication/authorization, which
+this demo does not implement. Never submit secrets in payloads. Offline senders must retry.
+
+```powershell
+mvn "-Dtest=WorkflowDefinitionValidatorTest" test
+mvn "-Dtest=DurableSignalIntegrationTest,DurableTimerIntegrationTest,WorkflowHistoryIntegrationTest,PostgresTaskQueueIntegrationTest" test
+mvn verify
+```
+
+The example is [human-approval-v1.json](examples/human-approval-v1.json). Session 17 is
+implemented and statically checked; compilation, migrations, tests, startup and the demo
+remain runtime unverified because Java, Maven and Docker are unavailable. Earlier session
+notes describe their historical checkpoints; Session 17 supersedes their no-signals boundary.

@@ -1,5 +1,8 @@
 # Session 16: durable workflow timers
 
+[Session 17](durable-signals.md) adds SIGNAL nodes alongside ACTIVITY/TIMER. Timer semantics
+below remain unchanged; the previous no-external-signals boundary is historical.
+
 A timer persists an absolute PostgreSQL wake_at, releases worker resources, and resumes
 the graph when the server dispatcher observes it due. Sleeping a worker thread or storing
 a long-lived in-memory scheduled Future would lose the wait on restart and occupy

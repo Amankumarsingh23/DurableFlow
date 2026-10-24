@@ -7,6 +7,7 @@ import io.durableflow.workflow.engine.OrphanedActivityException;
 import io.durableflow.workflow.run.*;
 import io.durableflow.workflow.history.*;
 import io.durableflow.workflow.timer.*;
+import io.durableflow.workflow.signal.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -27,15 +28,18 @@ public class WorkflowTaskOrchestrator {
     private final Clock clock;
     private final WorkflowHistoryWriter history;
     private final WorkflowTimerRepository timers;
+    private final SignalRepository signals;
+    private final SignalWaitCoordinator signalWaits;
 
     public WorkflowTaskOrchestrator(WorkflowRunRepository runs, ActivityExecutionRepository activities,
             WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator,
             ActivityTaskRepository tasks, WorkflowRunService runService, Clock clock, WorkflowHistoryWriter history,
-            WorkflowTimerRepository timers) {
+            WorkflowTimerRepository timers, SignalRepository signals, SignalWaitCoordinator signalWaits) {
         this.runs = runs; this.activities = activities; this.definitions = definitions;
         this.validator = validator; this.tasks = tasks; this.runService = runService; this.clock = clock;
         this.history = history;
         this.timers = timers;
+        this.signals = signals; this.signalWaits = signalWaits;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
@@ -43,7 +47,7 @@ public class WorkflowTaskOrchestrator {
         return advanceInTransaction(runId);
     }
 
-    /** Timer firing and downstream materialization share one commit; no crash gap after FIRED. */
+    /** Timer/signal receipt and downstream materialization can share one commit, without a callback gap. */
     @Transactional(propagation = Propagation.MANDATORY)
     public WorkflowRunResponse advanceInTransaction(UUID runId) {
         var run = runs.findByIdForUpdate(runId)
@@ -68,35 +72,52 @@ public class WorkflowTaskOrchestrator {
             throw new ApiException(HttpStatus.CONFLICT, "Activity rows do not match the workflow definition");
         }
         var timerRows = timers.findByRun(runId).stream().collect(Collectors.toMap(WorkflowTimer::timerId, Function.identity()));
-        var satisfaction = new NodeSatisfaction(steps, byId, timerRows);
+        var waits = signals.waits(runId).stream().collect(Collectors.toMap(SignalWait::signalNodeId, Function.identity()));
+        var satisfaction = new NodeSatisfaction(steps, byId, timerRows, waits);
         if (rows.stream().anyMatch(a -> a.getStatus() == ActivityExecutionStatus.FAILED)) {
             run.markFailed(clock.instant());
             history.append(runId, null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "ACTIVITY_FAILURE"));
-        } else if (satisfaction.allSatisfied()) {
-            run.markCompleted(clock.instant());
-            history.append(runId, null, WorkflowEventType.WORKFLOW_COMPLETED, Map.of());
         } else {
-            for (var step : steps) {
-                if (step.type() == NodeType.TIMER) {
-                    if (!timerRows.containsKey(step.id()) && satisfaction.dependenciesSatisfied(step)) {
-                        var timer = timers.schedule(runId, step.id(), step.delayMillis());
-                        timerRows.put(step.id(), timer);
-                        history.append(runId, null, WorkflowEventType.TIMER_SCHEDULED,
-                                Map.of("timerId", timer.timerId(), "delayMillis", step.delayMillis(), "wakeAt", timer.wakeAt().toString()));
+            boolean newlySatisfied;
+            do {
+                newlySatisfied = false;
+                for (var step : steps) {
+                    if (step.type() == NodeType.SIGNAL) {
+                        if (satisfaction.dependenciesSatisfied(step)) {
+                            var prior = waits.get(step.id());
+                            var current = signalWaits.materializeAndConsume(runId, step.id(), prior);
+                            waits.put(step.id(), current);
+                            if (current.status() == SignalWait.Status.RECEIVED
+                                    && (prior == null || prior.status() != SignalWait.Status.RECEIVED)) newlySatisfied = true;
+                        }
+                        continue;
                     }
-                    continue;
+                    if (step.type() == NodeType.TIMER) {
+                        if (!timerRows.containsKey(step.id()) && satisfaction.dependenciesSatisfied(step)) {
+                            var timer = timers.schedule(runId, step.id(), step.delayMillis());
+                            timerRows.put(step.id(), timer);
+                            history.append(runId, null, WorkflowEventType.TIMER_SCHEDULED,
+                                    Map.of("timerId", timer.timerId(), "delayMillis", step.delayMillis(), "wakeAt", timer.wakeAt().toString()));
+                        }
+                        continue;
+                    }
+                    var row = byId.get(step.id());
+                    if (row.getStatus() == ActivityExecutionStatus.PENDING && satisfaction.dependenciesSatisfied(step)) {
+                        var existing = queued.get(row.getId());
+                        if (existing == null) {
+                            var task = tasks.save(ActivityTaskEntity.ready(row.getId(), clock.instant()));
+                            queued.put(row.getId(), task);
+                            history.append(runId, row.getId(), WorkflowEventType.ACTIVITY_SCHEDULED, Map.of("taskId", task.getId().toString()));
+                        }
+                        else if (existing.getStatus() != ActivityTaskStatus.READY) {
+                            throw new ApiException(HttpStatus.CONFLICT, "Queued task does not match activity state");
+                        }
+                    }
                 }
-                var row = byId.get(step.id());
-                if (row.getStatus() == ActivityExecutionStatus.PENDING && satisfaction.dependenciesSatisfied(step)) {
-                    var existing = queued.get(row.getId());
-                    if (existing == null) {
-                        var task = tasks.save(ActivityTaskEntity.ready(row.getId(), clock.instant()));
-                        history.append(runId, row.getId(), WorkflowEventType.ACTIVITY_SCHEDULED, Map.of("taskId", task.getId().toString()));
-                    }
-                    else if (existing.getStatus() != ActivityTaskStatus.READY) {
-                        throw new ApiException(HttpStatus.CONFLICT, "Queued task does not match activity state");
-                    }
-                }
+            } while (newlySatisfied); // Buffered signals may unlock earlier-listed nodes in the same transaction.
+            if (satisfaction.allSatisfied()) {
+                run.markCompleted(clock.instant());
+                history.append(runId, null, WorkflowEventType.WORKFLOW_COMPLETED, Map.of());
             }
         }
         return runService.get(runId);

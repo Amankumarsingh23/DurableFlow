@@ -16,7 +16,7 @@ public final class WorkflowDefinitionDocument {
                             encoded.put("id", step.id()); encoded.put("type", step.type().name());
                             encoded.put("dependsOn", step.dependsOn());
                             if (step.type() == NodeType.ACTIVITY) encoded.put("activity", step.activity());
-                            else encoded.put("delayMillis", step.delayMillis());
+                            else if (step.type() == NodeType.TIMER) encoded.put("delayMillis", step.delayMillis());
                             return encoded;
                         }).toList());
     }

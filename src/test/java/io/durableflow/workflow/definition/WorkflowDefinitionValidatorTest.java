@@ -33,6 +33,32 @@ class WorkflowDefinitionValidatorTest {
     }
 
     @Test
+    void supportsExactSignalNodesInMixedGraphAndDocumentRoundTrip() {
+        var signal = new StepDefinition("approval", null, List.of("wait"), NodeType.SIGNAL, null);
+        var mixed = validator.normalizeAndValidate(request(List.of(step("submit"),
+                new StepDefinition("wait", null, List.of("submit"), NodeType.TIMER, 1000L), signal,
+                step("finish", "approval"))));
+        assertThat(WorkflowDefinitionDocument.steps(WorkflowDefinitionDocument.encode(mixed))).isEqualTo(mixed.steps());
+    }
+
+    @Test
+    void rejectsAmbiguousSignalFieldsDuplicateIdsAndMixedCycles() {
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                new StepDefinition("approval", "submitRequest", List.of(), NodeType.SIGNAL, null)))))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(
+                new StepDefinition("approval", null, List.of(), NodeType.SIGNAL, 1000L)))))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(step("same"),
+                new StepDefinition("same", null, List.of(), NodeType.SIGNAL, null)))))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(step("A", "approval"),
+                new StepDefinition("wait", null, List.of("A"), NodeType.TIMER, 1000L),
+                new StepDefinition("approval", null, List.of("wait"), NodeType.SIGNAL, null)))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("cycle");
+    }
+
+    @Test
     void acceptsMixedNodesAndRoundTripsBothFormats() {
         var timer = new StepDefinition("wait", null, List.of("payment"), NodeType.TIMER, 86400000L);
         var normalized = validator.normalizeAndValidate(request(List.of(step("payment"), timer, step("shipment", "wait"))));

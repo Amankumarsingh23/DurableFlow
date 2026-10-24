@@ -2,6 +2,8 @@
 
 [Session 16](durable-timers.md) extends this vocabulary with TIMER_SCHEDULED and TIMER_FIRED;
 timer identity is carried in metadata because timers have no ActivityExecution row.
+[Session 17](durable-signals.md) adds SIGNAL_WAIT_STARTED, SIGNAL_RECEIVED and SIGNAL_BUFFERED,
+with node/delivery identities in metadata and no copied signal payload.
 
 Current state answers **what is true now?** Event history answers **how did we get here?**
 DurableFlow now stores operational snapshots plus an append-only audit/debugging history.

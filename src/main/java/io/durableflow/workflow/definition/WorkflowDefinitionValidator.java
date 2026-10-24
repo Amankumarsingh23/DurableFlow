@@ -21,6 +21,10 @@ public class WorkflowDefinitionValidator {
                 if (step.activity() == null || step.activity().isBlank() || step.delayMillis() != null) {
                     throw invalid("ACTIVITY requires activity and must not specify delayMillis");
                 }
+            } else if (step.type() == NodeType.SIGNAL) {
+                if (step.delayMillis() != null || (step.activity() != null && !step.activity().isBlank())) {
+                    throw invalid("SIGNAL uses its exact node id and must not specify activity or delayMillis");
+                }
             } else if (step.delayMillis() == null || step.delayMillis() <= 0
                     || step.delayMillis() > 3_155_760_000_000L
                     || (step.activity() != null && !step.activity().isBlank())) {

@@ -5,6 +5,7 @@ import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.history.*;
 import io.durableflow.workflow.timer.WorkflowTimerRepository;
+import io.durableflow.workflow.signal.SignalRepository;
 import jakarta.validation.Validator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,11 @@ public class WorkflowRunService {
     private final Clock clock;
     private final WorkflowHistoryWriter history;
     private final WorkflowTimerRepository timers;
+    private final SignalRepository signals;
 
     public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
                               WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
-                              WorkflowHistoryWriter history, WorkflowTimerRepository timers) {
+                              WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals) {
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
@@ -35,6 +37,7 @@ public class WorkflowRunService {
         this.clock = clock;
         this.history = history;
         this.timers = timers;
+        this.signals = signals;
     }
 
     @Transactional
@@ -81,6 +84,6 @@ public class WorkflowRunService {
                 .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus(),
                         e.getOutputJson(), e.getErrorMessage())).toList();
         return new WorkflowRunResponse(run.getId(), definition.getName(), definition.getVersion(),
-                run.getStatus(), run.getInputJson(), states, timers.findByRun(runId));
+                run.getStatus(), run.getInputJson(), states, timers.findByRun(runId), signals.waits(runId));
     }
 }
