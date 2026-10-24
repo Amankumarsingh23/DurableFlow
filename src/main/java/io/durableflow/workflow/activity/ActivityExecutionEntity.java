@@ -47,7 +47,41 @@ public class ActivityExecutionEntity {
     @Column(name = "completed_at", nullable = true)
     private Instant completedAt;
 
+    @Column(name = "error_message", columnDefinition = "text")
+    private String errorMessage;
+
     public ActivityExecutionEntity() {}
+
+    public String getErrorMessage() { return errorMessage; }
+
+    public void markRunning(Map<String, Object> input, Instant now) {
+        requireStatus(ActivityExecutionStatus.PENDING);
+        status = ActivityExecutionStatus.RUNNING;
+        inputJson = input;
+        startedAt = now;
+        updatedAt = now;
+        attemptCount++;
+    }
+
+    public void markCompleted(Map<String, Object> output, Instant now) {
+        requireStatus(ActivityExecutionStatus.RUNNING);
+        outputJson = java.util.Objects.requireNonNull(output, "Activity output must be a JSON object");
+        status = ActivityExecutionStatus.COMPLETED;
+        updatedAt = now;
+        completedAt = now;
+    }
+
+    public void markFailed(String message, Instant now) {
+        requireStatus(ActivityExecutionStatus.RUNNING);
+        errorMessage = java.util.Objects.requireNonNull(message);
+        status = ActivityExecutionStatus.FAILED;
+        updatedAt = now;
+        completedAt = now;
+    }
+
+    private void requireStatus(ActivityExecutionStatus expected) {
+        if (status != expected) throw new IllegalStateException("Activity must be " + expected + ", was " + status);
+    }
 
     public UUID getId() { return id; }
     public UUID getWorkflowRunId() { return workflowRunId; }

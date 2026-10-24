@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.time.Clock;
 import java.util.UUID;
 
 @Service
@@ -17,14 +18,16 @@ public class WorkflowRunService {
     private final WorkflowRunRepository runs;
     private final ActivityExecutionRepository activities;
     private final Validator validator;
+    private final Clock clock;
 
     public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
-                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator) {
+                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock) {
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
         this.activities = activities;
         this.validator = validator;
+        this.clock = clock;
     }
 
     @Transactional
@@ -33,7 +36,7 @@ public class WorkflowRunService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Workflow name, positive version and input object are required");
         }
         var definition = definitions.get(request.workflowName().strip(), request.version());
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         var run = new WorkflowRunEntity();
         run.setWorkflowDefinitionId(definition.id());
         run.setStatus(WorkflowRunStatus.RUNNING);
@@ -57,7 +60,8 @@ public class WorkflowRunService {
         activities.saveAllAndFlush(executions);
         return new WorkflowRunResponse(run.getId(), definition.name(), definition.version(), run.getStatus(),
                 run.getInputJson(), executions.stream()
-                        .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus())).toList());
+                        .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus(),
+                                e.getOutputJson(), e.getErrorMessage())).toList());
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +70,8 @@ public class WorkflowRunService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Workflow run not found"));
         var definition = definitionRepository.findById(run.getWorkflowDefinitionId()).orElseThrow();
         var states = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId).stream()
-                .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus())).toList();
+                .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus(),
+                        e.getOutputJson(), e.getErrorMessage())).toList();
         return new WorkflowRunResponse(run.getId(), definition.getName(), definition.getVersion(),
                 run.getStatus(), run.getInputJson(), states);
     }

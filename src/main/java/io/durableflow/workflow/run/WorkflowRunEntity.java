@@ -39,6 +39,26 @@ public class WorkflowRunEntity {
 
     public WorkflowRunEntity() {}
 
+    public void markCompleted(Instant now) {
+        requireRunning();
+        status = WorkflowRunStatus.COMPLETED;
+        updatedAt = now;
+        completedAt = now;
+    }
+
+    public void markFailed(Instant now) {
+        requireRunning();
+        status = WorkflowRunStatus.FAILED;
+        updatedAt = now;
+        completedAt = now;
+    }
+
+    private void requireRunning() {
+        if (status != WorkflowRunStatus.RUNNING) {
+            throw new IllegalStateException("Workflow run must be RUNNING, was " + status);
+        }
+    }
+
     public UUID getId() { return id; }
     public UUID getWorkflowDefinitionId() { return workflowDefinitionId; }
     public void setWorkflowDefinitionId(UUID workflowDefinitionId) { this.workflowDefinitionId = workflowDefinitionId; }

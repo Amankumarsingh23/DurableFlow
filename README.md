@@ -2,7 +2,7 @@
 
 A durable workflow orchestration engine built incrementally for learning and SDE interview preparation.
 
-Sessions 5 and 6 establish persistence, workflow-definition registration and atomic run creation. Activities are not executed; workflow execution and crash recovery are not implemented.
+Sessions 5 and 6 establish persistence, workflow-definition registration and atomic run creation. Session 7 adds a single-process engine with sequential activity execution and persisted progress. Crash recovery is not implemented or proven yet.
 
 ## Prerequisites
 
@@ -88,7 +88,7 @@ Flyway's Boot starter enables migration auto-configuration; flyway-database-post
 
 ## Session 5 verification status
 
-On the authoring machine, Java, Maven and Docker are unavailable on PATH. Compilation, integration tests and application startup remain unverified for Sessions 5 and 6. Run the commands above after installing the prerequisites. XML/JSON parsing and Git whitespace checks are the available static checks.
+On the authoring machine, Java, Maven and Docker are unavailable on PATH. Compilation, integration tests and application startup remain unverified through Session 7. Run the commands above after installing the prerequisites. XML/JSON parsing, Java package/path checks and Git whitespace checks are the available static checks.
 
 ## Session 6 API examples
 
@@ -143,3 +143,60 @@ The validator unit tests cover sequential/branching graphs, duplicate IDs, missi
 WorkflowApiIntegrationTest uses real PostgreSQL and HTTP to check definition registration/retrieval/duplicates, input errors, run retrieval and initial row states. A test-only PostgreSQL trigger forces an activity insert failure and verifies that neither the run nor any activity remains after rollback. The trigger is removed in finally and is never part of production migrations.
 
 No Session 6 schema changes were needed; V1 remains unchanged. No workers, queues, execution engine or external infrastructure were added.
+
+## Session 7: execute the first workflow
+
+Start PostgreSQL and the app as above, then register and materialize a run. These PowerShell commands use the existing example JSON files:
+
+```powershell
+curl.exe -i -X POST http://localhost:8080/api/workflow-definitions -H "Content-Type: application/json" --data-binary "@examples/order-fulfillment-v1.json"
+curl.exe -i -X POST http://localhost:8080/api/workflow-runs -H "Content-Type: application/json" --data-binary "@examples/start-order.json"
+$runId = "replace-with-returned-runId"
+curl.exe "http://localhost:8080/api/workflow-runs/$runId"
+curl.exe -i -X POST "http://localhost:8080/api/workflow-runs/$runId/execute"
+curl.exe "http://localhost:8080/api/workflow-runs/$runId"
+```
+
+If OrderFulfillment v1 already exists, registration returns 409; reuse that definition. Creating a run still only materializes it: RUNNING run, PENDING activities, and no handler calls. The explicit execute request runs the workflow synchronously and returns its final DTO. Successful execution returns 200 with a COMPLETED run and activity outputs:
+
+| Logical step | Handler type | Deterministic output |
+| --- | --- | --- |
+| payment | chargePayment | {"paymentId":"pay-demo-123"} |
+| inventory | reserveInventory | {"reservationId":"res-demo-456"} |
+| shipment | createShipment | {"shipmentId":"ship-demo-789"} |
+
+These are demo handlers with no real payment, inventory or shipping integration. Every handler receives the workflow input; outputs are stored on the activity, without automatic output-to-input propagation.
+
+### Engine and state transitions
+
+ActivityRegistry indexes injected ActivityHandler implementations by stable type. Duplicate types fail bean creation. WorkflowEngine reloads the stored definition and activity states before every decision, validates the stored graph, and requires an exact match between logical steps and execution rows. It picks the first PENDING step in definition order whose dependencies are all COMPLETED. Multiple eligible roots execute sequentially; array ordering never overrides dependencies.
+
+The engine uses controlled entity methods for PENDING -> RUNNING -> COMPLETED/FAILED. Starting an activity records its input, started_at, updated_at and increments attempt_count from zero to one. Completion records output, completed_at and updated_at. A run becomes COMPLETED only after every expected activity row is COMPLETED. Production uses an injected UTC Clock; integration tests replace it with a fixed clock.
+
+A missing handler or thrown handler exception records activity FAILED with error_message, marks the run FAILED in the same transaction, and stops without executing dependents. The execute request returns 200 with the FAILED run representation: this is an execution outcome, not an HTTP transport failure. GET includes activity output and errorMessage. Diagnostics contain a bounded exception type/message, without stack traces.
+
+Missing runs return 404. Terminal/non-RUNNING runs and simultaneous execute calls for the same run in this JVM return 409. Invalid stored graphs, missing/extra activity rows and interrupted/no-progress states mark the run FAILED and return a clear 409. Existing RUNNING activity rows are not retried or recovered. An in-memory per-run guard prevents overlapping executions within this process and is removed on exit; it supplies no coordination across application instances. Run only one application instance for this learning milestone.
+
+### Short checkpoint transactions
+
+WorkflowEngine refuses an enclosing transaction. It calls a separate Spring bean, WorkflowEngineState, whose methods use new, short PostgreSQL transactions:
+
+1. Reload state, choose an eligible step, persist RUNNING and commit.
+2. Execute the handler **without a database transaction**.
+3. Persist COMPLETED/output, or atomically persist activity FAILED and workflow FAILED; commit.
+4. Reload state and choose the next eligible step, or complete the workflow.
+
+The engine never holds a database transaction open around arbitrary handler code. Every successful iteration durably completes another activity or terminates; invalid/no-progress state produces an error rather than a polling loop. Persistence failures propagate and do not trigger an automatic repeat of the handler.
+
+This intentionally leaves a crash window: a side effect could succeed before COMPLETED is committed. PostgreSQL would still report RUNNING. Persisted progress is present, but recovery, idempotency and crash/restart guarantees are not yet implemented or proven. No retries, parallel activity execution, queues or distributed workers exist. The synchronous execute endpoint is temporary learning scaffolding to be replaced by asynchronous dispatch.
+
+### Migration and verification
+
+V2__add_activity_failure_details.sql adds nullable TEXT error_message to activity_execution. V1 is unchanged. Flyway remains the schema owner and Hibernate still uses ddl-auto=validate. Existing startup tests now expect migration version 2.
+
+```powershell
+mvn "-Dtest=WorkflowDefinitionValidatorTest,ActivityLifecycleTest,ActivityRegistryTest" test
+mvn verify
+```
+
+The unit tests cover registry lookup/duplicate types, deterministic demos and valid/invalid lifecycle transitions. WorkflowEngineIntegrationTest adds PostgreSQL tests for dependency ordering, two eligible roots and a join, persisted outputs/timestamps, missing/throwing handlers, terminal-run rejection, impossible/interrupted states, corrupt definitions and the HTTP execute/GET flow. Test handlers inspect committed database state and verify no database transaction is active while they execute. Runtime tests, migrations and startup still require the Java/Maven/Docker prerequisites and remain unverified on the authoring machine.

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 // Explicit JSON document conversion; no arbitrary Java object serialization.
-final class WorkflowDefinitionDocument {
+public final class WorkflowDefinitionDocument {
     private WorkflowDefinitionDocument() {}
 
     static Map<String, Object> encode(RegisterWorkflowDefinitionRequest definition) {
@@ -14,7 +14,7 @@ final class WorkflowDefinitionDocument {
                                 "dependsOn", step.dependsOn())).toList());
     }
 
-    static List<StepDefinition> steps(Map<String, Object> document) {
+    public static List<StepDefinition> steps(Map<String, Object> document) {
         if (!(document.get("steps") instanceof List<?> steps)) {
             throw new IllegalStateException("Stored definition has no steps");
         }
