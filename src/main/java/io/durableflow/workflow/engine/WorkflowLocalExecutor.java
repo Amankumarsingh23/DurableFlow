@@ -2,6 +2,7 @@ package io.durableflow.workflow.engine;
 
 import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.ActivityRegistry;
+import io.durableflow.workflow.activity.ActivityExecutionContext;
 import io.durableflow.workflow.run.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,8 @@ public class WorkflowLocalExecutor {
                 try {
                     // RUNNING has committed; arbitrary handler code executes without a DB transaction.
                     LOG.info("Executing activity {} for workflow run {}", work.activityType(), runId);
-                    output = Objects.requireNonNull(registry.require(work.activityType()).execute(work.input()),
+                    output = Objects.requireNonNull(registry.require(work.activityType()).execute(
+                            new ActivityExecutionContext(runId, work.activityExecutionId()), work.input()),
                             "Activity output must be a JSON object");
                 } catch (Exception failure) {
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();

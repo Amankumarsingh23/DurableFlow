@@ -161,7 +161,7 @@ If OrderFulfillment v1 already exists, registration returns 409; reuse that defi
 
 | Logical step | Handler type | Deterministic output |
 | --- | --- | --- |
-| payment | chargePayment | {"paymentId":"pay-demo-123"} |
+| payment | chargePayment | {"paymentId":"pay-demo-<stable UUID for this logical activity>"} |
 | inventory | reserveInventory | {"reservationId":"res-demo-456"} |
 | shipment | createShipment | {"shipmentId":"ship-demo-789"} |
 
@@ -462,3 +462,34 @@ mvn verify
 
 Session 11 is implemented and statically checked. Compilation, migrations, all tests,
 startup and process demos remain unverified because Java, Maven and Docker are unavailable.
+
+## Session 12: stable keys and provider idempotency
+
+Handlers now receive ActivityExecutionContext (workflow run ID, logical activity ID and
+derived `df:v1:<activityExecutionId>` key). Both queued and legacy local execution supply
+this context. The key stays unchanged across workers and lease generations; no schema
+change or redundant key column is needed. Existing attempt counters remain observable.
+
+chargePayment uses a small in-memory FakePaymentProvider. The provider atomically records
+one canonical payload and payment result per key. Same key/payload returns the original
+payment ID; changed payload is rejected. Fencing still protects DurableFlow's state while
+provider idempotency protects the simulated external effect.
+
+The fake is shared within one application/test process only. It loses its memory on
+restart, and separate worker JVMs have separate fake instances. It demonstrates the
+provider contract, not durable multi-process payment deduplication. Deterministic IDs
+alone do not prove deduplication. Real integrations need a provider that honors the key
+or an application-specific durable strategy. No universal exactly-once claim is made.
+
+[Idempotency notes](docs/idempotency.md) explain the crash-after-payment window, provider
+limitations and test procedure. Reclamation remains the only repeat-execution mechanism
+added so far; ordinary handler failures do not receive automatic retries.
+
+```powershell
+mvn "-Dtest=PaymentIdempotencyTest,ActivityRegistryTest" test
+mvn "-Dtest=PaymentIdempotencyIntegrationTest,TaskLeaseIntegrationTest,PostgresTaskQueueIntegrationTest" test
+mvn verify
+```
+
+Session 12 implementation and static checks are complete. Tests, migrations/startup and
+process demos remain unverified because Java, Maven and Docker are unavailable here.

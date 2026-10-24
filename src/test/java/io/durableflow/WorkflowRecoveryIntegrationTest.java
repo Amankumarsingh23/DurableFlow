@@ -197,7 +197,7 @@ class WorkflowRecoveryIntegrationTest {
         private ActivityHandler handler(String step, Invocations recorder) {
             return new ActivityHandler() {
                 public String type() { return "recovery-" + step; }
-                public Map<String, Object> execute(Map<String, Object> input) {
+                public Map<String, Object> execute(io.durableflow.workflow.activity.ActivityExecutionContext context, Map<String, Object> input) {
                     assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
                     recorder.calls.add(step);
                     return Map.of("executed", step);

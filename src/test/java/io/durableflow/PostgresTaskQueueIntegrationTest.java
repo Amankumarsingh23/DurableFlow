@@ -353,7 +353,7 @@ class PostgresTaskQueueIntegrationTest {
     private ActivityHandler handler(String type, Function<Map<String, Object>, Map<String, Object>> body) {
         return new ActivityHandler() {
             public String type() { return type; }
-            public Map<String, Object> execute(Map<String, Object> input) { return body.apply(input); }
+            public Map<String, Object> execute(io.durableflow.workflow.activity.ActivityExecutionContext context, Map<String, Object> input) { return body.apply(input); }
         };
     }
 

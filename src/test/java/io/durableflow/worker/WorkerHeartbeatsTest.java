@@ -83,7 +83,7 @@ class WorkerHeartbeatsTest {
         var orchestrator = mock(WorkflowTaskOrchestrator.class);
         var registry = new ActivityRegistry(List.of(new ActivityHandler() {
             public String type() { return "demo"; }
-            public Map<String, Object> execute(Map<String, Object> input) {
+            public Map<String, Object> execute(io.durableflow.workflow.activity.ActivityExecutionContext context, Map<String, Object> input) {
                 tick.getValue().run(); // Deterministic ownership loss during handler work.
                 return Map.of("result", "late");
             }

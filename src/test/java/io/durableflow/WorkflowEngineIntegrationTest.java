@@ -180,11 +180,11 @@ class WorkflowEngineIntegrationTest {
                         + "/api/workflow-runs/" + run.runId() + "/execute"))
                 .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("COMPLETED", "pay-demo-123", "res-demo-456", "ship-demo-789");
+        assertThat(response.body()).contains("COMPLETED", "pay-demo-", "res-demo-456", "ship-demo-789");
         var get = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port
                 + "/api/workflow-runs/" + run.runId())).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(get.statusCode()).isEqualTo(200);
-        assertThat(get.body()).contains("pay-demo-123", "COMPLETED");
+        assertThat(get.body()).contains("pay-demo-", "COMPLETED");
         var again = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port
                         + "/api/workflow-runs/" + run.runId() + "/execute"))
                 .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
@@ -256,7 +256,7 @@ class WorkflowEngineIntegrationTest {
         private ActivityHandler handler(String type, Probe probe) {
             return new ActivityHandler() {
                 public String type() { return type; }
-                public Map<String, Object> execute(Map<String, Object> input) { return probe.execute(type, input); }
+                public Map<String, Object> execute(io.durableflow.workflow.activity.ActivityExecutionContext context, Map<String, Object> input) { return probe.execute(type, input); }
             };
         }
     }

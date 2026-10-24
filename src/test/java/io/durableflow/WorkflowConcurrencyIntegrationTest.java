@@ -107,7 +107,7 @@ class WorkflowConcurrencyIntegrationTest {
         var calls = new AtomicInteger();
         ActivityHandler handler = new ActivityHandler() {
             public String type() { return "concurrent-demo"; }
-            public Map<String, Object> execute(Map<String, Object> input) {
+            public Map<String, Object> execute(io.durableflow.workflow.activity.ActivityExecutionContext context, Map<String, Object> input) {
                 calls.incrementAndGet();
                 assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
                 // A separate short transaction can acquire the run lock during the handler.
