@@ -11,8 +11,9 @@ public class OrphanedActivityException extends ApiException {
     private final List<String> activityIds;
 
     public OrphanedActivityException(UUID runId, List<String> activityIds) {
-        super(HttpStatus.CONFLICT, "Recovery required: orphaned RUNNING activities " + activityIds
-                + ". Session 8 cannot safely determine whether the previous side effect occurred; automatic retry is disabled.");
+        super(HttpStatus.CONFLICT, "Recovery required: existing RUNNING activities " + activityIds
+                + ". Another invocation may still be executing, or a prior attempt may have been interrupted."
+                + " We cannot safely determine whether the previous side effect occurred; automatic retry is disabled.");
         this.runId = runId;
         this.activityIds = List.copyOf(activityIds);
     }

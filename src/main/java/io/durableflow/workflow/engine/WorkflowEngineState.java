@@ -7,15 +7,20 @@ import io.durableflow.workflow.run.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Separate bean so checkpoints commit before handler code runs. No method here invokes handlers. */
+/**
+ * Separate bean so checkpoints commit before handler code runs. No method here invokes handlers.
+ * Every mutation locks the run first, then reads activity state, using the same lock order.
+ * The lock is transaction-scoped: it is never held during ActivityHandler.execute.
+ */
 @Service
-@Transactional(propagation = Propagation.REQUIRES_NEW)
+@Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
 public class WorkflowEngineState {
     private final WorkflowRunRepository runs;
     private final WorkflowDefinitionRepository definitions;
@@ -102,7 +107,8 @@ public class WorkflowEngineState {
     }
 
     private WorkflowRunEntity running(UUID runId) {
-        var run = runs.findById(runId)
+        // Lock BEFORE checking status/eligibility. Contenders re-read after the previous checkpoint commits.
+        var run = runs.findByIdForUpdate(runId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Workflow run not found"));
         if (run.getStatus() != WorkflowRunStatus.RUNNING) {
             throw new ApiException(HttpStatus.CONFLICT, "Only RUNNING workflow runs can execute");
@@ -113,6 +119,9 @@ public class WorkflowEngineState {
     private ActivityExecutionEntity activity(UUID runId, UUID activityId) {
         var activity = activities.findById(activityId).orElseThrow();
         if (!runId.equals(activity.getWorkflowRunId())) throw new IllegalStateException("Activity belongs to another run");
+        if (activity.getStatus() != ActivityExecutionStatus.RUNNING) {
+            throw new ApiException(HttpStatus.CONFLICT, "Activity is no longer RUNNING");
+        }
         return activity;
     }
 }

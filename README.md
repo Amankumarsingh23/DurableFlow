@@ -2,7 +2,7 @@
 
 A durable workflow orchestration engine built incrementally for learning and SDE interview preparation.
 
-Sessions 5 and 6 establish persistence, workflow-definition registration and atomic run creation. Session 7 adds sequential execution with persisted progress. Session 8 adds explicit restart recovery between completed activities and detection of uncertain RUNNING activities. Runtime verification and a manual JVM-crash experiment remain outstanding.
+Sessions 5 and 6 establish persistence, workflow-definition registration and atomic run creation. Session 7 adds sequential execution with persisted progress. Session 8 adds explicit restart recovery and uncertain RUNNING detection. Session 9 coordinates competing checkpoint transactions through database row locking. Runtime verification and a manual JVM-crash experiment remain outstanding.
 
 ## Prerequisites
 
@@ -88,7 +88,7 @@ Flyway's Boot starter enables migration auto-configuration; flyway-database-post
 
 ## Session 5 verification status
 
-On the authoring machine, Java, Maven and Docker are unavailable on PATH. Compilation, integration tests and application startup remain unverified through Session 8. Run the commands above after installing the prerequisites. XML/JSON parsing, Java package/path checks and Git whitespace checks are the available static checks. No manual JVM crash/restart experiment has run.
+On the authoring machine, Java, Maven and Docker are unavailable on PATH. Compilation, integration/concurrency tests and application startup remain unverified through Session 9. Run the commands above after installing the prerequisites. XML/JSON parsing, Java package/path checks and Git whitespace checks are the available static checks. No manual JVM crash/restart experiment has run.
 
 ## Session 6 API examples
 
@@ -175,7 +175,7 @@ The engine uses controlled entity methods for PENDING -> RUNNING -> COMPLETED/FA
 
 A missing handler or thrown handler exception records activity FAILED with error_message, marks the run FAILED in the same transaction, and stops without executing dependents. The execute request returns 200 with the FAILED run representation: this is an execution outcome, not an HTTP transport failure. GET includes activity output and errorMessage. Diagnostics contain a bounded exception type/message, without stack traces.
 
-Missing runs return 404. Terminal/non-RUNNING runs and simultaneous execute calls for the same run in this JVM return 409. Invalid stored graphs, missing/extra activity rows and no-progress states mark the run FAILED and return a clear 409. Session 8 refines interrupted-state handling: existing RUNNING activities return RECOVERY_REQUIRED without changing persisted state. An in-memory per-run guard prevents overlapping executions within this process and is removed on exit; it supplies no coordination across application instances. Run only one application instance for this learning milestone.
+Missing runs return 404. Terminal/non-RUNNING runs and simultaneous execute calls through the same engine object return 409. Invalid stored graphs, missing/extra activity rows and no-progress states mark the run FAILED and return a clear 409. Existing RUNNING activities return RECOVERY_REQUIRED without changing persisted state. The in-memory guard remains local; Session 9 adds run-row locking for checkpoint decisions across cooperating engine instances. This is still a development engine without distributed worker ownership, leases or automatic reclamation.
 
 ### Short checkpoint transactions
 
@@ -285,3 +285,37 @@ mvn verify
 WorkflowRecoveryIntegrationTest starts a complete Spring web application against one Testcontainers PostgreSQL database, executes two activities, closes the entire application context (HTTP server, connection pool, JPA state, engine, registry and counters), and starts a new application context on the same database. Only the run ID and immutable assertion snapshots cross the boundary. Fresh handler counters must show only shipment executing, while completed row identities, outputs, timestamps and attempt counts remain unchanged. A second test restarts with payment COMPLETED, inventory RUNNING and shipment PENDING, checks the recovery-specific exception/HTTP response, and verifies no handler runs and no persisted checkpoint changes. Additional engine tests cover budget boundaries and terminal failure behavior. The Session 7 interrupted-state assertion is updated to the intentional Session 8 behavior: preserve uncertainty instead of marking the workflow FAILED.
 
 These are real application-context restart tests when run, but they do not kill or start a separate JVM. Implemented: yes. Static checks: performed. Runtime/migration/startup verification: blocked by missing tools. Manual forced JVM-crash test: not performed. Existing V1/V2 migrations, Hibernate validation and the PostgreSQL schema remain unchanged in Session 8.
+
+## Session 9: concurrent checkpoint safety
+
+Two independent engines could previously both read the same PENDING row and commit
+RUNNING before each called its handler. @Transactional and the local in-memory guard
+did not coordinate those separate instances.
+
+Every engine checkpoint now acquires a pessimistic write lock on its workflow_run row
+before inspecting activity state. A contender waits for the short transaction to commit,
+then re-reads the committed checkpoint. Existing RUNNING work returns the conservative
+409 RECOVERY_REQUIRED response without executing a handler or changing persisted state.
+The response now explicitly acknowledges that the other invocation may still be active.
+Completion, failure and graph finalization use the same lock protocol. Database locks
+are released before handler execution. No APIs, migrations or statuses were added.
+
+@Version was evaluated and deferred: the shared run lock already coordinates every
+current engine writer and protects terminal transitions. No new version column is needed.
+The [concurrency engineering notes](docs/concurrency.md) document the original race,
+SQL shape, re-read behavior, lock ordering, limitations, and row-lock/lease/idempotency
+distinctions.
+
+```powershell
+mvn "-Dtest=WorkflowConcurrencyIntegrationTest" test
+mvn "-Dtest=WorkflowEngineIntegrationTest,WorkflowRecoveryIntegrationTest" test
+mvn verify
+```
+
+New tests use barriers/latches and independent engine objects to check one claim winner,
+one handler invocation, unchanged contender-visible RUNNING state, valid completion/failure,
+and terminal-run protection. A test-only unsafe legacy example demonstrates the old race.
+The test handler also acquires the run lock in a separate transaction to check that no
+claim lock remains held during its work. These tests and full runtime verification remain
+unexecuted here because Java, Maven and Docker are missing. Crash-during-side-effect
+recovery, retries, idempotency, leases and the task queue remain outside Session 9.

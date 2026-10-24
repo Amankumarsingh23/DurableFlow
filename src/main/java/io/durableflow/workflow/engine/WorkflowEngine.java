@@ -18,7 +18,7 @@ public class WorkflowEngine {
     private final WorkflowEngineState state;
     private final ActivityRegistry registry;
     private final WorkflowRunService runs;
-    // Guard the temporary synchronous endpoint in this JVM only. This is not a distributed claim.
+    // Fast rejection for this object only. Database coordination is in WorkflowEngineState, not this set.
     private final Set<UUID> executing = ConcurrentHashMap.newKeySet();
 
     public WorkflowEngine(WorkflowEngineState state, ActivityRegistry registry, WorkflowRunService runs) {
