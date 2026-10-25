@@ -1,0 +1,10 @@
+{
+  "workflowName": "SagaOrder",
+  "version": 1,
+  "input": {
+    "orderId": "SAGA-DEMO",
+    "amount": 1000,
+    "currency": "INR",
+    "simulateShipmentFailure": true
+  }
+}

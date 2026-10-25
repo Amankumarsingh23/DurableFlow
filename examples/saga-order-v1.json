@@ -1,0 +1,27 @@
+{
+  "name": "SagaOrder",
+  "version": 1,
+  "steps": [
+    {
+      "id": "payment",
+      "activity": "chargePayment",
+      "compensation": "refundPayment",
+      "dependsOn": []
+    },
+    {
+      "id": "inventory",
+      "activity": "reserveInventory",
+      "compensation": "releaseInventory",
+      "dependsOn": [
+        "payment"
+      ]
+    },
+    {
+      "id": "shipment",
+      "activity": "createShipment",
+      "dependsOn": [
+        "inventory"
+      ]
+    }
+  ]
+}

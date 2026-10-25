@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "activity_execution")
-public class ActivityExecutionEntity {
+public class ActivityExecutionEntity implements DurableExecution {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

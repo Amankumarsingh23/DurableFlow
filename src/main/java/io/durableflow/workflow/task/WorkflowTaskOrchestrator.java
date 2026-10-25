@@ -8,6 +8,7 @@ import io.durableflow.workflow.run.*;
 import io.durableflow.workflow.history.*;
 import io.durableflow.workflow.timer.*;
 import io.durableflow.workflow.signal.*;
+import io.durableflow.workflow.compensation.SagaCoordinator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -30,16 +31,18 @@ public class WorkflowTaskOrchestrator {
     private final WorkflowTimerRepository timers;
     private final SignalRepository signals;
     private final SignalWaitCoordinator signalWaits;
+    private final SagaCoordinator sagas;
 
     public WorkflowTaskOrchestrator(WorkflowRunRepository runs, ActivityExecutionRepository activities,
             WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator,
             ActivityTaskRepository tasks, WorkflowRunService runService, Clock clock, WorkflowHistoryWriter history,
-            WorkflowTimerRepository timers, SignalRepository signals, SignalWaitCoordinator signalWaits) {
+            WorkflowTimerRepository timers, SignalRepository signals, SignalWaitCoordinator signalWaits,
+            SagaCoordinator sagas) {
         this.runs = runs; this.activities = activities; this.definitions = definitions;
         this.validator = validator; this.tasks = tasks; this.runService = runService; this.clock = clock;
         this.history = history;
         this.timers = timers;
-        this.signals = signals; this.signalWaits = signalWaits;
+        this.signals = signals; this.signalWaits = signalWaits; this.sagas = sagas;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
@@ -52,9 +55,12 @@ public class WorkflowTaskOrchestrator {
     public WorkflowRunResponse advanceInTransaction(UUID runId) {
         var run = runs.findByIdForUpdate(runId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Workflow run not found"));
+        if (run.getStatus() == WorkflowRunStatus.COMPENSATING) {
+            sagas.advance(run); return runService.get(runId);
+        }
         if (run.getStatus() != WorkflowRunStatus.RUNNING) return runService.get(runId);
         var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId);
-        var queued = tasks.findByRunId(runId).stream()
+        var queued = tasks.findByRunId(runId).stream().filter(task -> !task.isCompensation())
                 .collect(Collectors.toMap(ActivityTaskEntity::getActivityExecutionId, Function.identity()));
         var uncertain = rows.stream().filter(a -> a.getStatus() == ActivityExecutionStatus.RUNNING)
                 .filter(a -> !queued.containsKey(a.getId())
@@ -75,8 +81,7 @@ public class WorkflowTaskOrchestrator {
         var waits = signals.waits(runId).stream().collect(Collectors.toMap(SignalWait::signalNodeId, Function.identity()));
         var satisfaction = new NodeSatisfaction(steps, byId, timerRows, waits);
         if (rows.stream().anyMatch(a -> a.getStatus() == ActivityExecutionStatus.FAILED)) {
-            run.markFailed(clock.instant());
-            history.append(runId, null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "ACTIVITY_FAILURE"));
+            sagas.forwardFailed(run, "ACTIVITY_FAILURE");
         } else {
             boolean newlySatisfied;
             do {

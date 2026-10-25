@@ -9,7 +9,7 @@ import java.util.UUID;
 public class ActivityTaskEntity {
     @Id
     private UUID id;
-    @Column(name = "activity_execution_id", nullable = false)
+    @Column(name = "activity_execution_id")
     private UUID activityExecutionId;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -26,6 +26,21 @@ public class ActivityTaskEntity {
     private Instant leaseExpiresAt;
     @Column(name = "lease_generation", nullable = false)
     private long leaseGeneration;
+
+    @Column(name = "task_kind", nullable = false, length = 30)
+    private String taskKind = "FORWARD";
+    @Column(name = "compensation_execution_id")
+    private UUID compensationExecutionId;
+
+    public UUID getCompensationExecutionId() { return compensationExecutionId; }
+    public boolean isCompensation() { return "COMPENSATION".equals(taskKind); }
+    public String getTaskKind() { return taskKind; }
+
+    public static ActivityTaskEntity compensationReady(UUID executionId, Instant now) {
+        var task = ready(null, now);
+        task.taskKind = "COMPENSATION"; task.compensationExecutionId = executionId;
+        return task;
+    }
 
     protected ActivityTaskEntity() {}
 

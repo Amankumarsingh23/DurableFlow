@@ -4,6 +4,7 @@ import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.history.*;
+import io.durableflow.workflow.compensation.*;
 import io.durableflow.workflow.timer.WorkflowTimerRepository;
 import io.durableflow.workflow.signal.SignalRepository;
 import jakarta.validation.Validator;
@@ -25,10 +26,12 @@ public class WorkflowRunService {
     private final WorkflowHistoryWriter history;
     private final WorkflowTimerRepository timers;
     private final SignalRepository signals;
+    private final CompensationExecutionRepository compensations;
 
     public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
                               WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
-                              WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals) {
+                              WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals,
+                              CompensationExecutionRepository compensations) {
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
@@ -37,7 +40,7 @@ public class WorkflowRunService {
         this.clock = clock;
         this.history = history;
         this.timers = timers;
-        this.signals = signals;
+        this.signals = signals; this.compensations = compensations;
     }
 
     @Transactional
@@ -84,6 +87,8 @@ public class WorkflowRunService {
                 .map(e -> new WorkflowRunResponse.ActivityState(e.getActivityId(), e.getStatus(),
                         e.getOutputJson(), e.getErrorMessage())).toList();
         return new WorkflowRunResponse(run.getId(), definition.getName(), definition.getVersion(),
-                run.getStatus(), run.getInputJson(), states, timers.findByRun(runId), signals.waits(runId));
+                run.getStatus(), run.getInputJson(), states, timers.findByRun(runId), signals.waits(runId),
+                compensations.findByWorkflowRunIdOrderByCreatedAtAsc(runId).stream()
+                        .map(CompensationState::from).toList());
     }
 }

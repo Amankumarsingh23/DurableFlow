@@ -15,6 +15,7 @@ public final class WorkflowDefinitionDocument {
                             var encoded = new HashMap<String, Object>();
                             encoded.put("id", step.id()); encoded.put("type", step.type().name());
                             encoded.put("dependsOn", step.dependsOn());
+                            if (step.compensation() != null) encoded.put("compensation", step.compensation());
                             if (step.type() == NodeType.ACTIVITY) encoded.put("activity", step.activity());
                             else if (step.type() == NodeType.TIMER) encoded.put("delayMillis", step.delayMillis());
                             return encoded;
@@ -36,7 +37,7 @@ public final class WorkflowDefinitionDocument {
             Long delay = step.get("delayMillis") == null ? null : new java.math.BigDecimal(step.get("delayMillis").toString()).longValueExact();
             if (type == NodeType.ACTIVITY && (activity == null || activity.isBlank())) throw new IllegalStateException("Invalid activity step");
             if (type == NodeType.TIMER && (delay == null || delay <= 0)) throw new IllegalStateException("Invalid timer step");
-            return new StepDefinition(id, activity, dependencies.stream().map(String.class::cast).toList(), type, delay);
+            return new StepDefinition(id, activity, dependencies.stream().map(String.class::cast).toList(), type, delay, (String) step.get("compensation"));
         }).toList();
     }
 }

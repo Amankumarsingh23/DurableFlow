@@ -53,6 +53,16 @@ public class WorkflowRunEntity {
         completedAt = now;
     }
 
+    public void startCompensating(Instant now) {
+        requireRunning(); status = WorkflowRunStatus.COMPENSATING; updatedAt = now;
+    }
+
+    public void finishCompensation(boolean success, Instant now) {
+        if (status != WorkflowRunStatus.COMPENSATING) throw new IllegalStateException("Workflow must be COMPENSATING");
+        status = success ? WorkflowRunStatus.COMPENSATED : WorkflowRunStatus.COMPENSATION_FAILED;
+        updatedAt = now; completedAt = now;
+    }
+
     private void requireRunning() {
         if (status != WorkflowRunStatus.RUNNING) {
             throw new IllegalStateException("Workflow run must be RUNNING, was " + status);

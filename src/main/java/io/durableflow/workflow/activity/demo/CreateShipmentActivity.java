@@ -10,6 +10,9 @@ import java.util.Map;
 public class CreateShipmentActivity implements ActivityHandler {
     public String type() { return "createShipment"; }
     public Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input) {
+        if (Boolean.TRUE.equals(input.get("simulateShipmentFailure"))) {
+            throw new IllegalArgumentException("Simulated permanent shipment failure");
+        }
         return Map.of("shipmentId", "ship-demo-789");
     }
 }

@@ -17,6 +17,10 @@ public class WorkflowDefinitionValidator {
             throw invalid("Name, positive version and nonempty valid steps are required");
         }
         for (var step : request.steps()) {
+            if (step.compensation() != null && (step.type() != NodeType.ACTIVITY
+                    || !step.compensation().strip().matches("[A-Za-z][A-Za-z0-9_.-]{0,199}"))) {
+                throw invalid("Compensation must be an ACTIVITY handler name of 1-200 characters");
+            }
             if (step.type() == NodeType.ACTIVITY) {
                 if (step.activity() == null || step.activity().isBlank() || step.delayMillis() != null) {
                     throw invalid("ACTIVITY requires activity and must not specify delayMillis");
@@ -33,10 +37,22 @@ public class WorkflowDefinitionValidator {
         }
         var steps = request.steps().stream()
                 .map(step -> new StepDefinition(step.id().strip(), step.type() == NodeType.ACTIVITY ? step.activity().strip() : null,
-                        step.dependsOn().stream().map(String::strip).distinct().toList(), step.type(), step.delayMillis()))
+                        step.dependsOn().stream().map(String::strip).distinct().toList(), step.type(), step.delayMillis(),
+                        step.compensation() == null ? null : step.compensation().strip()))
                 .toList();
         var normalized = new RegisterWorkflowDefinitionRequest(request.name().strip(), request.version(), steps);
         validateGraph(steps);
+        if (steps.stream().anyMatch(s -> s.compensation() != null)) {
+            var children = new HashMap<String, Integer>();
+            for (var step : steps) {
+                if (step.dependsOn().size() > 1) throw invalid("Saga compensation requires a single sequential chain");
+                for (var parent : step.dependsOn()) children.merge(parent, 1, Integer::sum);
+            }
+            if (steps.stream().filter(s -> s.dependsOn().isEmpty()).count() != 1
+                    || children.values().stream().anyMatch(count -> count > 1)) {
+                throw invalid("Saga compensation requires a single sequential chain");
+            }
+        }
         return normalized;
     }
 

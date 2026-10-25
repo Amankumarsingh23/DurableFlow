@@ -33,6 +33,28 @@ class WorkflowDefinitionValidatorTest {
     }
 
     @Test
+    void compensationRoundTripsAndSequentialValidationPreservesOrdinaryDags() {
+        var payment = new StepDefinition("payment", "chargePayment", List.of(), NodeType.ACTIVITY, null, " refundPayment ");
+        var valid = validator.normalizeAndValidate(request(List.of(step("shipment", "payment"), payment)));
+        assertThat(valid.steps().get(1).compensation()).isEqualTo("refundPayment");
+        assertThat(WorkflowDefinitionDocument.steps(WorkflowDefinitionDocument.encode(valid))).isEqualTo(valid.steps());
+        assertThatCode(() -> validator.normalizeAndValidate(request(List.of(step("A"), step("B"))))).doesNotThrowAnyException();
+        for (var invalid : List.of(
+                new StepDefinition("x", null, List.of(), NodeType.TIMER, 1L, "refundPayment"),
+                new StepDefinition("x", null, List.of(), NodeType.SIGNAL, null, "refundPayment"),
+                new StepDefinition("x", "chargePayment", List.of(), NodeType.ACTIVITY, null, " "),
+                new StepDefinition("x", "chargePayment", List.of(), NodeType.ACTIVITY, null, "bad handler"))) {
+            assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(invalid)))).isInstanceOf(ApiException.class);
+        }
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("other")))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment")))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment", "B")))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
+    }
+
+    @Test
     void supportsExactSignalNodesInMixedGraphAndDocumentRoundTrip() {
         var signal = new StepDefinition("approval", null, List.of("wait"), NodeType.SIGNAL, null);
         var mixed = validator.normalizeAndValidate(request(List.of(step("submit"),

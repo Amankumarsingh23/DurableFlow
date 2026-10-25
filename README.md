@@ -635,3 +635,22 @@ The example is [human-approval-v1.json](examples/human-approval-v1.json). Sessio
 implemented and statically checked; compilation, migrations, tests, startup and the demo
 remain runtime unverified because Java, Maven and Docker are unavailable. Earlier session
 notes describe their historical checkpoints; Session 17 supersedes their no-signals boundary.
+
+
+## Session 18: orchestrated Saga compensation
+
+ACTIVITY definitions may declare compensation handlers. A permanently failed sequential
+workflow now queues one completed activity's compensation at a time in reverse dependency
+order through the existing worker reliability pipeline. Runs expose COMPENSATING,
+COMPENSATED and COMPENSATION_FAILED plus current compensation states and durable history.
+Existing definitions without compensation retain their previous behavior.
+
+See [Saga design, schema, failure policy, verification and demo](docs/saga-compensation.md),
+[definition](examples/saga-order-v1.json) and [start payload](examples/start-saga-order.json).
+V9 adds compensation executions and queue task kinds; V1-V8 remain unchanged. Saga definitions
+require one sequential chain; parallel-DAG compensation remains deferred. The synchronous
+execute endpoint rejects Saga definitions; use advance and queue workers.
+
+Session 18 is implemented and statically checked. Java, Maven and Docker are unavailable
+on PATH, so compilation, migration execution, tests, startup and the live demo remain
+unverified. The demo provider's idempotency ledger is per JVM, not a production shared ledger.

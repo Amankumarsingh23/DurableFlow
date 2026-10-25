@@ -51,7 +51,7 @@ class DurableSignalIntegrationTest {
     @Autowired WorkflowTimerRepository timers;
     @LocalServerPort int port;
     @BeforeEach void clean() {
-        jdbc.execute("TRUNCATE workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
+        jdbc.execute("TRUNCATE compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
     }
 
     @Test

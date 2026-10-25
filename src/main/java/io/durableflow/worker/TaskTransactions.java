@@ -1,6 +1,7 @@
 package io.durableflow.worker;
 
 import io.durableflow.api.ApiException;
+import io.durableflow.workflow.compensation.*;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.run.*;
@@ -29,15 +30,18 @@ public class TaskTransactions {
     private final RetryDelayCalculator retryDelays;
     private final FailureClassifier classifier;
     private final WorkflowHistoryWriter history;
+    private final CompensationExecutionRepository compensations;
+    private final SagaCoordinator sagas;
 
     public TaskTransactions(ActivityTaskRepository tasks, ActivityExecutionRepository activities,
                             WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
                             JdbcTemplate jdbc, WorkerLeaseSettings leases, RetryPolicy retryPolicy,
-                            RetryDelayCalculator retryDelays, FailureClassifier classifier, WorkflowHistoryWriter history) {
+                            RetryDelayCalculator retryDelays, FailureClassifier classifier, WorkflowHistoryWriter history,
+                            CompensationExecutionRepository compensations, SagaCoordinator sagas) {
         this.tasks = tasks; this.activities = activities; this.runs = runs;
         this.definitions = definitions; this.jdbc = jdbc; this.leases = leases;
         this.retryPolicy = retryPolicy; this.retryDelays = retryDelays; this.classifier = classifier;
-        this.history = history;
+        this.history = history; this.compensations = compensations; this.sagas = sagas;
     }
 
     public Optional<ClaimedTask> claim(String workerId) {
@@ -48,10 +52,16 @@ public class TaskTransactions {
         if (selected.isEmpty()) return Optional.empty();
         var task = selected.get();
         // The first read is only a reference lookup; reload state after acquiring the run lock.
-        UUID runId = activities.findWorkflowRunId(task.getActivityExecutionId()).orElseThrow();
+        UUID runId = task.isCompensation()
+                ? compensations.findWorkflowRunId(task.getCompensationExecutionId()).orElseThrow()
+                : activities.findWorkflowRunId(task.getActivityExecutionId()).orElseThrow();
         var run = runs.findByIdForUpdate(runId).orElseThrow();
-        var activity = activities.findById(task.getActivityExecutionId()).orElseThrow();
-        if (run.getStatus() != WorkflowRunStatus.RUNNING) return Optional.empty();
+        DurableExecution activity = task.isCompensation()
+                ? compensations.findById(task.getCompensationExecutionId()).orElseThrow()
+                : activities.findById(task.getActivityExecutionId()).orElseThrow();
+        if (run.getStatus() != (task.isCompensation() ? WorkflowRunStatus.COMPENSATING : WorkflowRunStatus.RUNNING)) {
+            return Optional.empty();
+        }
         Instant now = databaseNow(); // After lock waits, never a worker clock or transaction-start NOW().
         boolean reclaim = task.getStatus() == ActivityTaskStatus.CLAIMED;
         String previousWorker = task.getWorkerId();
@@ -68,21 +78,28 @@ public class TaskTransactions {
             // Recover a crashed final attempt without starting an extra handler invocation.
             task.claimLease(workerId, now, now.plusMillis(leases.leaseMillis()));
             activity.markFailed("Maximum attempts exhausted before another execution could start", now);
-            run.markFailed(now);
             task.fail();
             claimEvent(task, runId, activity, reclaim, previousWorker, false);
-            failedEvents(runId, activity.getId(), "ATTEMPTS_EXHAUSTED", true);
+            terminalEvents(run, activity, "ATTEMPTS_EXHAUSTED");
             return Optional.empty();
         }
-        var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
-        String type = WorkflowDefinitionDocument.steps(definition.getDefinitionJson()).stream()
-                .filter(step -> step.id().equals(activity.getActivityId())).findFirst().orElseThrow().activity();
+        String type;
+        UUID originalId;
+        if (activity instanceof CompensationExecutionEntity compensation) {
+            type = compensation.getHandler(); originalId = compensation.getOriginalActivityExecutionId();
+        } else {
+            var forward = (ActivityExecutionEntity) activity;
+            var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
+            type = WorkflowDefinitionDocument.steps(definition.getDefinitionJson()).stream()
+                    .filter(step -> step.id().equals(forward.getActivityId())).findFirst().orElseThrow().activity();
+            originalId = forward.getId();
+        }
         task.claimLease(workerId, now, now.plusMillis(leases.leaseMillis()));
         if (activity.getStatus() == ActivityExecutionStatus.RUNNING) activity.startNextAttempt(now);
-        else activity.markRunning(run.getInputJson(), now);
+        else activity.markRunning(task.isCompensation() ? activity.getInputJson() : run.getInputJson(), now);
         claimEvent(task, runId, activity, reclaim, previousWorker, true);
-        return Optional.of(new ClaimedTask(task.getId(), runId, activity.getId(), type, activity.getInputJson(),
-                workerId, task.getLeaseGeneration(), task.getLeaseExpiresAt()));
+        return Optional.of(new ClaimedTask(task.getId(), runId, originalId, type, activity.getInputJson(),
+                workerId, task.getLeaseGeneration(), task.getLeaseExpiresAt(), task.getCompensationExecutionId()));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, timeout = 5)
@@ -93,35 +110,36 @@ public class TaskTransactions {
     public void complete(ClaimedTask claim, Map<String, Object> output) {
         owned(claim);
         var run = runs.findByIdForUpdate(claim.runId()).orElseThrow();
-        allowOutcome(run);
-        var activity = runningActivity(claim);
+        allowOutcome(run, claim);
+        var activity = runningExecution(claim);
         activity.markCompleted(output, databaseNow());
         finish(claim, ActivityTaskStatus.COMPLETED);
-        history.append(claim.runId(), claim.activityExecutionId(), WorkflowEventType.ACTIVITY_COMPLETED,
-                Map.of("generation", claim.leaseGeneration(), "attemptCount", activity.getAttemptCount()));
+        history.append(claim.runId(), claim.activityExecutionId(),
+                claim.isCompensation() ? WorkflowEventType.COMPENSATION_COMPLETED : WorkflowEventType.ACTIVITY_COMPLETED,
+                executionData(claim, Map.of("generation", claim.leaseGeneration(), "attemptCount", activity.getAttemptCount())));
+        if (claim.isCompensation()) sagas.advance(run);
     }
 
     public void fail(ClaimedTask claim, String message) {
         owned(claim);
         var run = runs.findByIdForUpdate(claim.runId()).orElseThrow();
-        allowOutcome(run);
+        allowOutcome(run, claim);
         var now = databaseNow();
-        runningActivity(claim).markFailed(message, now);
-        boolean failedRun = run.getStatus() == WorkflowRunStatus.RUNNING;
-        if (failedRun) run.markFailed(now);
+        var execution = runningExecution(claim);
+        execution.markFailed(message, now);
         finish(claim, ActivityTaskStatus.FAILED);
-        failedEvents(claim.runId(), claim.activityExecutionId(), "ACTIVITY_FAILURE", failedRun);
+        terminalEvents(run, execution, "ACTIVITY_FAILURE");
     }
 
     public void handleFailure(ClaimedTask claim, Exception failure) {
         owned(claim);
         var run = runs.findByIdForUpdate(claim.runId()).orElseThrow();
-        allowOutcome(run);
-        var activity = runningActivity(claim);
+        allowOutcome(run, claim);
+        var activity = runningExecution(claim);
         String message = failure.getClass().getSimpleName() + ": "
                 + Objects.toString(failure.getMessage(), "Activity execution failed");
         message = message.substring(0, Math.min(message.length(), 2000));
-        if (run.getStatus() == WorkflowRunStatus.RUNNING
+        if ((run.getStatus() == WorkflowRunStatus.RUNNING || run.getStatus() == WorkflowRunStatus.COMPENSATING)
                 && classifier.classify(failure) == FailureClassifier.Classification.RETRYABLE
                 && activity.getAttemptCount() < retryPolicy.maxAttempts()) {
             long delay = retryDelays.delayMillis(retryPolicy, activity.getAttemptCount());
@@ -133,49 +151,62 @@ public class TaskTransactions {
             String available = Objects.requireNonNull(jdbc.queryForObject(
                     "SELECT available_at FROM activity_task WHERE id = ?", OffsetDateTime.class, claim.taskId())).toInstant().toString();
             history.append(claim.runId(), claim.activityExecutionId(), WorkflowEventType.RETRY_SCHEDULED,
-                    Map.of("attemptCount", activity.getAttemptCount(), "generation", claim.leaseGeneration(),
+                    executionData(claim, Map.of("attemptCount", activity.getAttemptCount(), "generation", claim.leaseGeneration(),
                             "delayMillis", delay, "availableAt", available, "classification", "RETRYABLE",
-                            "code", failure instanceof ActivityTimeoutException ? "ACTIVITY_TIMEOUT" : "TRANSIENT_FAILURE"));
+                            "code", failure instanceof ActivityTimeoutException ? "ACTIVITY_TIMEOUT" : "TRANSIENT_FAILURE")));
         } else {
             activity.markFailed(message, databaseNow());
-            boolean failedRun = run.getStatus() == WorkflowRunStatus.RUNNING;
-            if (failedRun) run.markFailed(databaseNow());
             finish(claim, ActivityTaskStatus.FAILED);
             timeoutEvent(claim, failure, activity.getAttemptCount());
-            failedEvents(claim.runId(), claim.activityExecutionId(),
+            terminalEvents(run, activity,
                     classifier.classify(failure) == FailureClassifier.Classification.RETRYABLE
                             ? (activity.getAttemptCount() >= retryPolicy.maxAttempts() ? "RETRY_BUDGET_EXHAUSTED" : "WORKFLOW_ALREADY_FAILED")
-                            : "NON_RETRYABLE_FAILURE", failedRun);
+                            : "NON_RETRYABLE_FAILURE");
         }
     }
 
-    private void claimEvent(ActivityTaskEntity task, UUID runId, ActivityExecutionEntity activity,
+    private void claimEvent(ActivityTaskEntity task, UUID runId, DurableExecution activity,
                             boolean reclaimed, String previousWorker, boolean executionStarted) {
         var data = new HashMap<String, Object>();
         data.put("taskId", task.getId().toString()); data.put("workerId", task.getWorkerId());
         data.put("generation", task.getLeaseGeneration()); data.put("attemptCount", activity.getAttemptCount());
         data.put("executionStarted", executionStarted);
         if (reclaimed) data.put("previousWorkerId", previousWorker);
-        history.append(runId, activity.getId(), reclaimed ? WorkflowEventType.TASK_RECLAIMED : WorkflowEventType.TASK_CLAIMED, data);
+        UUID originalId = activity instanceof CompensationExecutionEntity c ? c.getOriginalActivityExecutionId() : activity.getId();
+        if (task.isCompensation()) { data.put("taskKind", "COMPENSATION"); data.put("compensationExecutionId", activity.getId().toString()); }
+        history.append(runId, originalId, reclaimed ? WorkflowEventType.TASK_RECLAIMED : WorkflowEventType.TASK_CLAIMED, data);
     }
 
     private void timeoutEvent(ClaimedTask claim, Exception failure, int attempts) {
         if (failure instanceof ActivityTimeoutException timeout) {
             history.append(claim.runId(), claim.activityExecutionId(), WorkflowEventType.ACTIVITY_TIMED_OUT,
-                    Map.of("timeoutMillis", timeout.timeoutMillis(), "attemptCount", attempts, "generation", claim.leaseGeneration()));
+                    executionData(claim, Map.of("timeoutMillis", timeout.timeoutMillis(), "attemptCount", attempts, "generation", claim.leaseGeneration())));
         }
     }
 
-    private void failedEvents(UUID runId, UUID activityId, String code, boolean failedRun) {
-        history.append(runId, activityId, WorkflowEventType.ACTIVITY_FAILED, Map.of("code", code));
-        if (failedRun) history.append(runId, null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", code));
+    private Map<String, Object> executionData(ClaimedTask claim, Map<String, Object> data) {
+        if (!claim.isCompensation()) return data;
+        var result = new HashMap<String, Object>(data);
+        result.put("taskKind", "COMPENSATION"); result.put("compensationExecutionId", claim.compensationExecutionId().toString());
+        return result;
+    }
+
+    private void terminalEvents(WorkflowRunEntity run, DurableExecution execution, String code) {
+        if (execution instanceof CompensationExecutionEntity compensation) {
+            sagas.compensationFailed(run, compensation, code);
+        } else {
+            history.append(run.getId(), execution.getId(), WorkflowEventType.ACTIVITY_FAILED, Map.of("code", code));
+            sagas.forwardFailed(run, code);
+        }
     }
 
     private ActivityTaskEntity owned(ClaimedTask claim) {
         var task = tasks.findByIdForUpdate(claim.taskId()).orElseThrow(() -> new OwnershipLostException(claim));
         if (task.getStatus() != ActivityTaskStatus.CLAIMED || !Objects.equals(task.getWorkerId(), claim.workerId())
                 || task.getLeaseGeneration() != claim.leaseGeneration()
-                || !task.getActivityExecutionId().equals(claim.activityExecutionId())) {
+                || task.isCompensation() != claim.isCompensation()
+                || (claim.isCompensation() ? !Objects.equals(task.getCompensationExecutionId(), claim.compensationExecutionId())
+                    : !Objects.equals(task.getActivityExecutionId(), claim.activityExecutionId()))) {
             throw new OwnershipLostException(claim);
         }
         return task;
@@ -194,15 +225,23 @@ public class TaskTransactions {
         return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class)).toInstant();
     }
 
-    private ActivityExecutionEntity runningActivity(ClaimedTask claim) {
-        var activity = activities.findById(claim.activityExecutionId()).orElseThrow();
+    private DurableExecution runningExecution(ClaimedTask claim) {
+        DurableExecution activity = claim.isCompensation()
+                ? compensations.findById(claim.compensationExecutionId()).orElseThrow()
+                : activities.findById(claim.activityExecutionId()).orElseThrow();
+        if (activity instanceof CompensationExecutionEntity c
+                && !c.getOriginalActivityExecutionId().equals(claim.activityExecutionId())) throw new OwnershipLostException(claim);
         if (!activity.getWorkflowRunId().equals(claim.runId()) || activity.getStatus() != ActivityExecutionStatus.RUNNING) {
             throw new ApiException(HttpStatus.CONFLICT, "Activity does not match the claimed task");
         }
         return activity;
     }
 
-    private void allowOutcome(WorkflowRunEntity run) {
+    private void allowOutcome(WorkflowRunEntity run, ClaimedTask claim) {
+        if (claim.isCompensation()) {
+            if (run.getStatus() != WorkflowRunStatus.COMPENSATING) throw new OwnershipLostException(claim);
+            return;
+        }
         // A different already-claimed root can fail while this handler is executing. Record its outcome
         // without reopening the FAILED workflow; new READY tasks are excluded by the claim query.
         if (run.getStatus() != WorkflowRunStatus.RUNNING && run.getStatus() != WorkflowRunStatus.FAILED) {

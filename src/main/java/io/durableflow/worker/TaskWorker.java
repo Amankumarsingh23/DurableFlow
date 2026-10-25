@@ -1,7 +1,6 @@
 package io.durableflow.worker;
 
 import io.durableflow.workflow.activity.ActivityRegistry;
-import io.durableflow.workflow.activity.ActivityExecutionContext;
 import io.durableflow.workflow.task.WorkflowTaskOrchestrator;
 import org.slf4j.*;
 import org.springframework.stereotype.Service;
@@ -61,7 +60,7 @@ public class TaskWorker {
             try {
                 session.ensureOwned();
                 output = ticket.execute(() -> Objects.requireNonNull(registry.require(claim.activityType()).execute(
-                        new ActivityExecutionContext(claim.runId(), claim.activityExecutionId()), claim.input()),
+                        claim.context(), claim.input()),
                         "Activity output must be a JSON object"));
             } catch (HandlerExecutions.Abandoned cancelled) {
                 throw new OwnershipLostException(claim);

@@ -7,21 +7,29 @@ import java.util.*;
 
 public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity, UUID> {
     Optional<ActivityTaskEntity> findByActivityExecutionId(UUID activityExecutionId);
+    Optional<ActivityTaskEntity> findByCompensationExecutionId(UUID compensationExecutionId);
 
-    @Query("select t from ActivityTaskEntity t, ActivityExecutionEntity a "
-            + "where t.activityExecutionId = a.id and a.workflowRunId = :runId")
+    @Query(value = """
+            SELECT t.* FROM activity_task t
+            LEFT JOIN activity_execution a ON a.id = t.activity_execution_id
+            LEFT JOIN compensation_execution c ON c.id = t.compensation_execution_id
+            WHERE COALESCE(a.workflow_run_id, c.workflow_run_id) = :runId
+            """, nativeQuery = true)
     List<ActivityTaskEntity> findByRunId(@Param("runId") UUID runId);
 
     /** Claim/reclaim and ownership transfer share one transaction. All eligibility times are DB times. */
     @Query(value = """
             SELECT t.* FROM activity_task t
-            JOIN activity_execution a ON a.id = t.activity_execution_id
-            JOIN workflow_run r ON r.id = a.workflow_run_id
-            WHERE r.status = 'RUNNING' AND (
+            LEFT JOIN activity_execution a ON a.id = t.activity_execution_id
+            LEFT JOIN compensation_execution c ON c.id = t.compensation_execution_id
+            JOIN workflow_run r ON r.id = COALESCE(a.workflow_run_id, c.workflow_run_id)
+            WHERE ((t.task_kind = 'FORWARD' AND r.status = 'RUNNING')
+                OR (t.task_kind = 'COMPENSATION' AND r.status = 'COMPENSATING')) AND (
                 (t.status = 'READY' AND t.available_at <= statement_timestamp() AND
-                    ((t.lease_generation = 0 AND a.status = 'PENDING')
-                     OR (t.lease_generation > 0 AND a.status = 'RUNNING')))
-                OR (t.status = 'CLAIMED' AND t.lease_expires_at <= statement_timestamp() AND a.status = 'RUNNING')
+                    ((t.lease_generation = 0 AND COALESCE(c.status, a.status) = 'PENDING')
+                     OR (t.lease_generation > 0 AND COALESCE(c.status, a.status) = 'RUNNING')))
+                OR (t.status = 'CLAIMED' AND t.lease_expires_at <= statement_timestamp()
+                    AND COALESCE(c.status, a.status) = 'RUNNING')
             )
             ORDER BY CASE WHEN t.status = 'READY' THEN t.available_at ELSE t.lease_expires_at END,
                      t.created_at, t.id
