@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 22 adds [durable retrieval and grounded-agent context](docs/rag-retrieval.md): a local
+fake corpus with dense/sparse/hybrid ranking, tenant/type filters, bounded source-labelled
+context and a retrieval -> model -> human signal -> configured action demo. A provider-neutral
+first-claim input hook freezes the actual grounded model request. No embeddings API, vector DB,
+new schema or autonomous planner is added. Runtime checks remain blocked by missing
+Java/Maven/Docker; static verification is separate.
+
 Session 21 adds [durable model activities and an agent workflow demo](docs/ai-model-gateway.md).
 A provider-neutral ModelGateway delegates to a deterministic fake; modelCall uses the existing
 worker reliability path with versioned durable requests and persisted result/usage metadata.

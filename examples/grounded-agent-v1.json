@@ -1,0 +1,32 @@
+{
+  "name": "GroundedAgent",
+  "version": 1,
+  "steps": [
+    {
+      "id": "policies",
+      "activity": "retrieveContext",
+      "dependsOn": []
+    },
+    {
+      "id": "recommendation",
+      "activity": "modelCall",
+      "dependsOn": [
+        "policies"
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "SIGNAL",
+      "dependsOn": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "action",
+      "activity": "applyApprovedAction",
+      "dependsOn": [
+        "approval"
+      ]
+    }
+  ]
+}

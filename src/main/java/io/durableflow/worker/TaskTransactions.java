@@ -32,16 +32,17 @@ public class TaskTransactions {
     private final WorkflowHistoryWriter history;
     private final CompensationExecutionRepository compensations;
     private final SagaCoordinator sagas;
+    private final ActivityInputPreparation inputPreparation;
 
     public TaskTransactions(ActivityTaskRepository tasks, ActivityExecutionRepository activities,
                             WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
                             JdbcTemplate jdbc, WorkerLeaseSettings leases, RetryPolicy retryPolicy,
                             RetryDelayCalculator retryDelays, FailureClassifier classifier, WorkflowHistoryWriter history,
-                            CompensationExecutionRepository compensations, SagaCoordinator sagas) {
+                            CompensationExecutionRepository compensations, SagaCoordinator sagas, ActivityInputPreparation inputPreparation) {
         this.tasks = tasks; this.activities = activities; this.runs = runs;
         this.definitions = definitions; this.jdbc = jdbc; this.leases = leases;
         this.retryPolicy = retryPolicy; this.retryDelays = retryDelays; this.classifier = classifier;
-        this.history = history; this.compensations = compensations; this.sagas = sagas;
+        this.history = history; this.compensations = compensations; this.sagas = sagas; this.inputPreparation = inputPreparation;
     }
 
     public Optional<ClaimedTask> claim(String workerId) {
@@ -86,19 +87,22 @@ public class TaskTransactions {
             return Optional.empty();
         }
         String type;
+        StepDefinition forwardStep = null;
         UUID originalId;
         if (activity instanceof CompensationExecutionEntity compensation) {
             type = compensation.getHandler(); originalId = compensation.getOriginalActivityExecutionId();
         } else {
             var forward = (ActivityExecutionEntity) activity;
             var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
-            type = WorkflowDefinitionDocument.steps(definition.getDefinitionJson()).stream()
-                    .filter(step -> step.id().equals(forward.getActivityId())).findFirst().orElseThrow().activity();
+            forwardStep = WorkflowDefinitionDocument.steps(definition.getDefinitionJson()).stream()
+                    .filter(step -> step.id().equals(forward.getActivityId())).findFirst().orElseThrow();
+            type = forwardStep.activity();
             originalId = forward.getId();
         }
         task.claimLease(workerId, now, now.plusMillis(leases.leaseMillis()));
         if (activity.getStatus() == ActivityExecutionStatus.RUNNING) activity.startNextAttempt(now);
-        else activity.markRunning(task.isCompensation() ? activity.getInputJson() : run.getInputJson(), now);
+        else activity.markRunning(task.isCompensation() ? activity.getInputJson()
+                : inputPreparation.prepare(runId, forwardStep, run.getInputJson()), now);
         claimEvent(task, runId, activity, reclaim, previousWorker, true);
         return Optional.of(new ClaimedTask(task.getId(), runId, originalId, type, activity.getInputJson(),
                 workerId, task.getLeaseGeneration(), task.getLeaseExpiresAt(), task.getCompensationExecutionId()));

@@ -11,6 +11,8 @@ public class ModelCallActivity implements ActivityHandler {
     public ModelCallActivity(ModelGateway gateway) { this.gateway = gateway; }
     public String type() { return "modelCall"; }
     public Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input) throws Exception {
+        if (input.get("grounding") != null && (!(input.get("groundingPreparation") instanceof Map<?,?> preparation)
+                || !"PREPARED".equals(preparation.get("status")))) throw new IllegalArgumentException("MODEL_INVALID_GROUNDING");
         var response = gateway.call(ModelRequest.fromInput(input), context.idempotencyKey());
         var output = new LinkedHashMap<String, Object>();
         output.put("outputVersion", 1); output.put("provider", response.provider()); output.put("model", response.model());
@@ -19,6 +21,7 @@ public class ModelCallActivity implements ActivityHandler {
         output.put("usage", Map.of("inputTokens", response.usage().inputTokens(), "outputTokens", response.usage().outputTokens()));
         output.put("latencyMillis", response.latencyMillis());
         if (response.providerRequestId() != null) output.put("providerRequestId", response.providerRequestId());
+        if (input.get("grounding") != null) output.put("grounding",input.get("groundingPreparation"));
         return output;
     }
 }

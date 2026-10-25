@@ -1,0 +1,38 @@
+{
+  "workflowName": "GroundedAgent",
+  "version": 1,
+  "input": {
+    "retrievalRequest": {
+      "requestVersion": 1,
+      "retriever": "fake",
+      "corpusVersion": "policies-v1",
+      "rankingVersion": "local-v1",
+      "query": "refund POL-RFD-042",
+      "strategy": "HYBRID",
+      "topK": 4,
+      "maxContextChars": 3000,
+      "filters": {
+        "tenantId": "tenant-a",
+        "documentType": "policy"
+      }
+    },
+    "grounding": {
+      "groundingVersion": 1,
+      "sourceNodeId": "policies"
+    },
+    "modelRequest": {
+      "requestVersion": 1,
+      "provider": "fake",
+      "model": "fake-recommendation-v1",
+      "systemInstructions": "Recommend a safe next step for human review. Cite supplied source labels when applicable.",
+      "userContent": "Order ORDER-RAG-22 was purchased 14 days ago. Which refund review steps apply?",
+      "temperature": 0.0,
+      "maxOutputTokens": 256,
+      "structuredOutput": true
+    },
+    "approvedAction": {
+      "name": "markReviewed",
+      "target": "ORDER-RAG-22"
+    }
+  }
+}

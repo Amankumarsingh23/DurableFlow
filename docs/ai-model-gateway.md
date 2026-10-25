@@ -1,5 +1,8 @@
 # Session 21: durable model activities
 
+Historical Session 21 checkpoint: [Session 22](rag-retrieval.md) adds a bounded completed-
+retrieval binding that freezes grounded model input on first queue claim.
+
 LLM/model calls are side-effecting external operations that can fail, time out, be retried or
 return after their worker loses ownership. DurableFlow already has the queue, supervision,
 leases, fencing and checkpoints for this work. A registered modelCall ACTIVITY reuses them;
