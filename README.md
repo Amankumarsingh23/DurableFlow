@@ -654,3 +654,19 @@ execute endpoint rejects Saga definitions; use advance and queue workers.
 Session 18 is implemented and statically checked. Java, Maven and Docker are unavailable
 on PATH, so compilation, migration execution, tests, startup and the live demo remain
 unverified. The demo provider's idempotency ledger is per JVM, not a production shared ledger.
+
+
+## Session 19: static parallel DAGs and durable AND-joins
+
+Advancement authorizes every eligible independent node; distributed queue workers control
+actual parallelism. All dependencies must be durably satisfied before fan-in. Saga definitions
+now support DAGs, with deterministic reverse topological compensation. Compensation waits
+for already-started forward activities to settle, records valid late outcomes and blocks new
+forward starts. Undo execution remains sequential.
+
+See [parallel DAG design, failure policy, restart behavior and demo](docs/parallel-dag.md),
+[ParallelOrder definition](examples/parallel-order-v1.json) and [start payload](examples/start-parallel-order.json).
+No schema migration is needed; V1-V9 are unchanged. This supersedes Session 18's linear-only
+Saga restriction. Added PostgreSQL concurrency/restart/late-sibling scenarios remain runtime
+unverified because Java, Maven and Docker are unavailable on PATH. Static fan-out only;
+dynamic/map fan-out and parallel compensation are deferred.

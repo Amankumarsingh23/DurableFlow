@@ -87,6 +87,7 @@ public class WorkflowTaskOrchestrator {
             do {
                 newlySatisfied = false;
                 for (var step : steps) {
+                    if (satisfaction.satisfied(step.id())) continue;
                     if (step.type() == NodeType.SIGNAL) {
                         if (satisfaction.dependenciesSatisfied(step)) {
                             var prior = waits.get(step.id());
@@ -114,7 +115,7 @@ public class WorkflowTaskOrchestrator {
                             queued.put(row.getId(), task);
                             history.append(runId, row.getId(), WorkflowEventType.ACTIVITY_SCHEDULED, Map.of("taskId", task.getId().toString()));
                         }
-                        else if (existing.getStatus() != ActivityTaskStatus.READY) {
+                        else if (existing.getStatus() != ActivityTaskStatus.READY || existing.getLeaseGeneration() != 0) {
                             throw new ApiException(HttpStatus.CONFLICT, "Queued task does not match activity state");
                         }
                     }

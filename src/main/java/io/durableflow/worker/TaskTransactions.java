@@ -59,7 +59,9 @@ public class TaskTransactions {
         DurableExecution activity = task.isCompensation()
                 ? compensations.findById(task.getCompensationExecutionId()).orElseThrow()
                 : activities.findById(task.getActivityExecutionId()).orElseThrow();
-        if (run.getStatus() != (task.isCompensation() ? WorkflowRunStatus.COMPENSATING : WorkflowRunStatus.RUNNING)) {
+        boolean settlingForward = !task.isCompensation() && run.getStatus() == WorkflowRunStatus.COMPENSATING
+                && activity.getStatus() == ActivityExecutionStatus.RUNNING && task.getLeaseGeneration() > 0;
+        if (!settlingForward && run.getStatus() != (task.isCompensation() ? WorkflowRunStatus.COMPENSATING : WorkflowRunStatus.RUNNING)) {
             return Optional.empty();
         }
         Instant now = databaseNow(); // After lock waits, never a worker clock or transaction-start NOW().
@@ -117,7 +119,7 @@ public class TaskTransactions {
         history.append(claim.runId(), claim.activityExecutionId(),
                 claim.isCompensation() ? WorkflowEventType.COMPENSATION_COMPLETED : WorkflowEventType.ACTIVITY_COMPLETED,
                 executionData(claim, Map.of("generation", claim.leaseGeneration(), "attemptCount", activity.getAttemptCount())));
-        if (claim.isCompensation()) sagas.advance(run);
+        if (run.getStatus() == WorkflowRunStatus.COMPENSATING) sagas.advance(run);
     }
 
     public void fail(ClaimedTask claim, String message) {
@@ -242,9 +244,10 @@ public class TaskTransactions {
             if (run.getStatus() != WorkflowRunStatus.COMPENSATING) throw new OwnershipLostException(claim);
             return;
         }
-        // A different already-claimed root can fail while this handler is executing. Record its outcome
-        // without reopening the FAILED workflow; new READY tasks are excluded by the claim query.
-        if (run.getStatus() != WorkflowRunStatus.RUNNING && run.getStatus() != WorkflowRunStatus.FAILED) {
+        // Accept a fenced late sibling outcome while the Saga waits for started forward work.
+        // PENDING forward tasks remain excluded; FAILED non-Saga runs retain their prior behavior.
+        if (run.getStatus() != WorkflowRunStatus.RUNNING && run.getStatus() != WorkflowRunStatus.FAILED
+                && run.getStatus() != WorkflowRunStatus.COMPENSATING) {
             throw new ApiException(HttpStatus.CONFLICT, "Workflow no longer accepts task outcomes");
         }
     }

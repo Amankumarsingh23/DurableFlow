@@ -1,5 +1,8 @@
 # Session 18: orchestrated Saga compensation
 
+Historical Session 18 checkpoint: [Session 19](parallel-dag.md) supersedes the single-chain
+restriction with DAG ordering and adds settlement of already-started forward siblings.
+
 Rollback undoes changes inside one database transaction. Compensation is a **new
 business operation** that counteracts an already-committed external effect. PostgreSQL
 cannot roll back a payment provider's successful charge. A refund leaves both a charge

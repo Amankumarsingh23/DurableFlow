@@ -33,7 +33,7 @@ class WorkflowDefinitionValidatorTest {
     }
 
     @Test
-    void compensationRoundTripsAndSequentialValidationPreservesOrdinaryDags() {
+    void compensationRoundTripsAndAcceptsStaticDags() {
         var payment = new StepDefinition("payment", "chargePayment", List.of(), NodeType.ACTIVITY, null, " refundPayment ");
         var valid = validator.normalizeAndValidate(request(List.of(step("shipment", "payment"), payment)));
         assertThat(valid.steps().get(1).compensation()).isEqualTo("refundPayment");
@@ -46,12 +46,16 @@ class WorkflowDefinitionValidatorTest {
                 new StepDefinition("x", "chargePayment", List.of(), NodeType.ACTIVITY, null, "bad handler"))) {
             assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(invalid)))).isInstanceOf(ApiException.class);
         }
-        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("other")))))
-                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
-        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment")))))
-                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
-        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment", "B")))))
-                .isInstanceOf(ApiException.class).hasMessageContaining("sequential");
+        assertThatCode(() -> validator.normalizeAndValidate(request(List.of(payment, step("other"))))).doesNotThrowAnyException();
+        assertThatCode(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment")))))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "payment"), step("C", "payment", "B")))))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(payment, step("B", "missing")))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("Unknown");
+        var cyclicPayment = new StepDefinition("payment", "chargePayment", List.of("B"), NodeType.ACTIVITY, null, "refundPayment");
+        assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(cyclicPayment, step("B", "payment")))))
+                .isInstanceOf(ApiException.class).hasMessageContaining("cycle");
     }
 
     @Test

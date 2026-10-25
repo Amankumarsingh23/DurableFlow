@@ -42,17 +42,6 @@ public class WorkflowDefinitionValidator {
                 .toList();
         var normalized = new RegisterWorkflowDefinitionRequest(request.name().strip(), request.version(), steps);
         validateGraph(steps);
-        if (steps.stream().anyMatch(s -> s.compensation() != null)) {
-            var children = new HashMap<String, Integer>();
-            for (var step : steps) {
-                if (step.dependsOn().size() > 1) throw invalid("Saga compensation requires a single sequential chain");
-                for (var parent : step.dependsOn()) children.merge(parent, 1, Integer::sum);
-            }
-            if (steps.stream().filter(s -> s.dependsOn().isEmpty()).count() != 1
-                    || children.values().stream().anyMatch(count -> count > 1)) {
-                throw invalid("Saga compensation requires a single sequential chain");
-            }
-        }
         return normalized;
     }
 

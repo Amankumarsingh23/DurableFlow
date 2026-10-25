@@ -31,8 +31,9 @@ public class SagaCoordinator {
     }
 
     public void forwardFailed(WorkflowRunEntity run, String code) {
+        if (run.getStatus() == WorkflowRunStatus.COMPENSATING) { advance(run); return; }
         if (run.getStatus() != WorkflowRunStatus.RUNNING) return;
-        if (plan(run).isEmpty()) {
+        if (plan(run).isEmpty() && !(hasRunningForward(run) && steps(run).stream().anyMatch(s -> s.compensation() != null))) {
             run.markFailed(clock.instant());
             history.append(run.getId(), null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", code));
             return;
@@ -44,7 +45,16 @@ public class SagaCoordinator {
 
     public void advance(WorkflowRunEntity run) {
         if (run.getStatus() != WorkflowRunStatus.COMPENSATING) return;
-        for (var item : plan(run)) {
+        // Freeze the compensation set only after every already-started forward execution settles.
+        // No new PENDING forward execution may start; bounded retry/reclaim may resolve RUNNING work.
+        if (hasRunningForward(run)) return;
+        var plan = plan(run);
+        if (plan.isEmpty()) {
+            run.finishWithoutCompensation(clock.instant());
+            history.append(run.getId(), null, WorkflowEventType.WORKFLOW_FAILED, Map.of("code", "NO_COMPLETED_COMPENSATABLE_EFFECTS"));
+            return;
+        }
+        for (var item : plan) {
             var existing = compensations.findByOriginalActivityExecutionId(item.original().getId());
             if (existing.isPresent()) {
                 if (existing.get().getStatus() == ActivityExecutionStatus.COMPLETED) continue;
@@ -73,27 +83,32 @@ public class SagaCoordinator {
         history.append(run.getId(), null, WorkflowEventType.WORKFLOW_COMPENSATION_FAILED, Map.of("code", code));
     }
 
-    private List<Item> plan(WorkflowRunEntity run) {
+    private boolean hasRunningForward(WorkflowRunEntity run) {
+        return activities.findByWorkflowRunIdOrderByActivityIdAsc(run.getId()).stream()
+                .anyMatch(a -> a.getStatus() == ActivityExecutionStatus.RUNNING);
+    }
+
+    private List<StepDefinition> steps(WorkflowRunEntity run) {
         var definition = definitions.findById(run.getWorkflowDefinitionId()).orElseThrow();
-        var steps = validator.normalizeAndValidate(new RegisterWorkflowDefinitionRequest(definition.getName(),
+        return validator.normalizeAndValidate(new RegisterWorkflowDefinitionRequest(definition.getName(),
                 definition.getVersion(), WorkflowDefinitionDocument.steps(definition.getDefinitionJson()))).steps();
-        if (steps.stream().noneMatch(s -> s.compensation() != null)) return List.of();
-        // Graph validation guarantees one connected acyclic chain, including timer/signal gates.
-        var children = new HashMap<String, StepDefinition>();
-        for (var step : steps) for (var dependency : step.dependsOn()) children.put(dependency, step);
+    }
+
+    private List<Item> plan(WorkflowRunEntity run) {
+        // Sort ALL graph nodes before filtering: dependencies through non-compensatable nodes,
+        // TIMERs and SIGNALs must still constrain ancestor/descendant compensation order.
+        var ordered = new ArrayList<>(WorkflowGraph.topologicalOrder(steps(run)));
+        Collections.reverse(ordered);
         var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(run.getId()).stream()
                 .collect(Collectors.toMap(ActivityExecutionEntity::getActivityId, a -> a));
-        var reverse = new ArrayList<Item>();
-        var step = steps.stream().filter(s -> s.dependsOn().isEmpty()).findFirst().orElseThrow();
-        while (step != null) {
+        var result = new ArrayList<Item>();
+        for (var step : ordered) {
             var original = rows.get(step.id());
             if (step.compensation() != null && original != null && original.getStatus() == ActivityExecutionStatus.COMPLETED) {
-                reverse.add(new Item(original, step.compensation()));
+                result.add(new Item(original, step.compensation()));
             }
-            step = children.get(step.id());
         }
-        Collections.reverse(reverse);
-        return reverse;
+        return result;
     }
     private record Item(ActivityExecutionEntity original, String handler) {}
 }

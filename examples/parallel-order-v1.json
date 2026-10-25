@@ -1,0 +1,50 @@
+{
+  "name": "ParallelOrder",
+  "version": 1,
+  "steps": [
+    {
+      "id": "payment",
+      "activity": "chargePayment",
+      "compensation": "refundPayment",
+      "dependsOn": []
+    },
+    {
+      "id": "fraud",
+      "activity": "checkFraud",
+      "dependsOn": [
+        "payment"
+      ]
+    },
+    {
+      "id": "inventory",
+      "activity": "reserveInventory",
+      "compensation": "releaseInventory",
+      "dependsOn": [
+        "payment"
+      ]
+    },
+    {
+      "id": "risk",
+      "activity": "scoreRisk",
+      "dependsOn": [
+        "payment"
+      ]
+    },
+    {
+      "id": "finalize",
+      "activity": "finalizeRequest",
+      "dependsOn": [
+        "fraud",
+        "inventory",
+        "risk"
+      ]
+    },
+    {
+      "id": "shipment",
+      "activity": "createShipment",
+      "dependsOn": [
+        "finalize"
+      ]
+    }
+  ]
+}

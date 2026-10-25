@@ -23,7 +23,8 @@ public interface ActivityTaskRepository extends JpaRepository<ActivityTaskEntity
             LEFT JOIN activity_execution a ON a.id = t.activity_execution_id
             LEFT JOIN compensation_execution c ON c.id = t.compensation_execution_id
             JOIN workflow_run r ON r.id = COALESCE(a.workflow_run_id, c.workflow_run_id)
-            WHERE ((t.task_kind = 'FORWARD' AND r.status = 'RUNNING')
+            WHERE ((t.task_kind = 'FORWARD' AND (r.status = 'RUNNING'
+                    OR (r.status = 'COMPENSATING' AND a.status = 'RUNNING' AND t.lease_generation > 0)))
                 OR (t.task_kind = 'COMPENSATION' AND r.status = 'COMPENSATING')) AND (
                 (t.status = 'READY' AND t.available_at <= statement_timestamp() AND
                     ((t.lease_generation = 0 AND COALESCE(c.status, a.status) = 'PENDING')
