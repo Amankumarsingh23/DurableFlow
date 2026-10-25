@@ -19,10 +19,11 @@ public class SignalReceiver {
     private final WorkflowTaskOrchestrator orchestrator;
     private final WorkflowHistoryWriter history;
     private final Validator validator;
+    private final List<SignalAcceptanceGuard> guards;
     public SignalReceiver(WorkflowRunRepository runs, WorkflowDefinitionRepository definitions, SignalRepository signals,
-                          WorkflowTaskOrchestrator orchestrator, WorkflowHistoryWriter history, Validator validator) {
+                          WorkflowTaskOrchestrator orchestrator, WorkflowHistoryWriter history, Validator validator, List<SignalAcceptanceGuard> guards) {
         this.runs = runs; this.definitions = definitions; this.signals = signals;
-        this.orchestrator = orchestrator; this.history = history; this.validator = validator;
+        this.orchestrator = orchestrator; this.history = history; this.validator = validator; this.guards = List.copyOf(guards);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
@@ -44,6 +45,7 @@ public class SignalReceiver {
         if (signals.forNode(runId, request.signalNodeId()).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "Signal node already has an accepted delivery; reuse its original signalId");
         }
+        for (var guard : guards) guard.beforeAccept(runId, request);
         signals.insert(runId, request);
         boolean waiting = signals.waits(runId).stream().anyMatch(wait -> wait.signalNodeId().equals(request.signalNodeId()));
         if (!waiting) history.append(runId, null, WorkflowEventType.SIGNAL_BUFFERED,

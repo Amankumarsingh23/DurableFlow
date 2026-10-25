@@ -1,0 +1,39 @@
+{
+  "name": "SafeRefundAgent",
+  "version": 1,
+  "steps": [
+    {
+      "id": "policies",
+      "activity": "retrieveContext",
+      "dependsOn": []
+    },
+    {
+      "id": "recommendation",
+      "activity": "modelCall",
+      "dependsOn": [
+        "policies"
+      ]
+    },
+    {
+      "id": "proposal",
+      "activity": "createToolRequest",
+      "dependsOn": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "SIGNAL",
+      "dependsOn": [
+        "proposal"
+      ]
+    },
+    {
+      "id": "execute",
+      "activity": "executeTool",
+      "dependsOn": [
+        "approval"
+      ]
+    }
+  ]
+}

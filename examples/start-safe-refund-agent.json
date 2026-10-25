@@ -1,0 +1,39 @@
+{
+  "workflowName": "SafeRefundAgent",
+  "version": 1,
+  "input": {
+    "retrievalRequest": {
+      "requestVersion": 1,
+      "retriever": "fake",
+      "corpusVersion": "policies-v1",
+      "rankingVersion": "local-v1",
+      "query": "refund POL-RFD-042",
+      "strategy": "HYBRID",
+      "topK": 4,
+      "maxContextChars": 3000,
+      "filters": {
+        "tenantId": "tenant-a",
+        "documentType": "policy"
+      }
+    },
+    "grounding": {
+      "groundingVersion": 1,
+      "sourceNodeId": "policies"
+    },
+    "modelRequest": {
+      "requestVersion": 1,
+      "provider": "fake",
+      "model": "fake-tool-refund-v1",
+      "systemInstructions": "Propose one structured tool request for server-side validation and human review.",
+      "userContent": "Propose a refund for order O-42, amount 4500. Do not execute it.",
+      "temperature": 0.0,
+      "maxOutputTokens": 256,
+      "structuredOutput": true
+    },
+    "toolBinding": {
+      "sourceNodeId": "recommendation",
+      "executeNodeId": "execute",
+      "approvalNodeId": "approval"
+    }
+  }
+}

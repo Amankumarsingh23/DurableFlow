@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 23 adds [safe durable tools and MCP-style discovery](docs/tool-execution-mcp.md): an
+explicit tool allowlist, immutable request/fingerprint, separate permission/policy decisions,
+exact request-bound human SIGNAL approval and worker execution with provider idempotency.
+V11 adds tool_request and a simulated external-effect ledger; V1-V10 remain unchanged. Fake
+read/refund examples and deterministic tests are included. Runtime verification remains blocked
+by missing Java/Maven/Docker. No autonomous loop or real remote MCP transport is added.
+
 Session 22 adds [durable retrieval and grounded-agent context](docs/rag-retrieval.md): a local
 fake corpus with dense/sparse/hybrid ranking, tenant/type filters, bounded source-labelled
 context and a retrieval -> model -> human signal -> configured action demo. A provider-neutral

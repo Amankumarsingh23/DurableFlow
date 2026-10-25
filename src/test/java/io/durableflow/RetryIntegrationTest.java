@@ -51,7 +51,7 @@ class RetryIntegrationTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void clean() { jdbc.execute("TRUNCATE workflow_schedule_occurrence, workflow_schedule, child_workflow_execution, compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition"); }
+    void clean() { jdbc.execute("TRUNCATE fake_tool_effect, tool_request, workflow_schedule_occurrence, workflow_schedule, child_workflow_execution, compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition"); }
 
     @Test
     void transientFailuresPersistDelayedRetriesThenSucceedWithOneEffectAndStableKey() {

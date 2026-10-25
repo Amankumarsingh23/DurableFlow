@@ -52,7 +52,9 @@ public class WorkflowLocalExecutor {
                 try {
                     // RUNNING has committed; arbitrary handler code executes without a DB transaction.
                     LOG.info("Executing activity {} for workflow run {}", work.activityType(), runId);
-                    output = Objects.requireNonNull(registry.require(work.activityType()).execute(
+                    var handler = registry.require(work.activityType());
+                    if (handler.requiresDurableWorker()) throw new IllegalArgumentException("Activity requires advance and durable task workers");
+                    output = Objects.requireNonNull(handler.execute(
                             new ActivityExecutionContext(runId, work.activityExecutionId()), work.input()),
                             "Activity output must be a JSON object");
                 } catch (Exception failure) {

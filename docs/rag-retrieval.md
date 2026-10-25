@@ -1,5 +1,7 @@
 # Session 22: durable retrieval and grounded context
 
+Session 23 extends this example with [immutable tool requests, policy and exact approval](tool-execution-mcp.md). The configured Session 22 action remains a historical receipt-gate demo.
+
 Retrieval-augmented generation (RAG) supplies selected reference material to a model request.
 Retrieval is a separate retrieveContext ACTIVITY, so selection, source provenance and context
 become a durable checkpoint before generation. Both retrieval and model calls use the existing

@@ -1,0 +1,25 @@
+{
+  "name": "SafeOrderLookup",
+  "version": 1,
+  "steps": [
+    {
+      "id": "recommendation",
+      "activity": "modelCall",
+      "dependsOn": []
+    },
+    {
+      "id": "proposal",
+      "activity": "createToolRequest",
+      "dependsOn": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "execute",
+      "activity": "executeTool",
+      "dependsOn": [
+        "proposal"
+      ]
+    }
+  ]
+}

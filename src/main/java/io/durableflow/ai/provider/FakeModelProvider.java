@@ -34,7 +34,7 @@ public class FakeModelProvider implements ModelProvider {
         int attempt = attempts.computeIfAbsent(key, ignored -> new AtomicInteger()).incrementAndGet();
         invocations.add(new Invocation(request, key, attempt));
         beforeResponse.accept(request, key, attempt);
-        if (!Set.of("fake-recommendation-v1", "fake-text-v1").contains(request.model())) {
+        if (!Set.of("fake-recommendation-v1", "fake-text-v1", "fake-tool-refund-v1", "fake-tool-read-v1").contains(request.model())) {
             throw new ModelProviderException(ModelProviderException.Kind.INVALID_MODEL);
         }
         var outcome = script.get(Math.min(attempt - 1, script.size() - 1));
@@ -48,6 +48,13 @@ public class FakeModelProvider implements ModelProvider {
                 Math.min(request.maxOutputTokens(), 24));
         String requestId = "fake-" + UUID.nameUUIDFromBytes((key + ":" + attempt).getBytes(StandardCharsets.UTF_8));
         if (outcome == Outcome.MALFORMED_STRUCTURED) return new ModelResponse("not-json", null, id(), request.model(), usage, 7, requestId);
+        if (request.model().startsWith("fake-tool-")) {
+            if (!request.structuredOutput()) throw new ModelProviderException(ModelProviderException.Kind.INVALID_REQUEST);
+            var proposal = request.model().equals("fake-tool-refund-v1")
+                    ? Map.of("toolName", "refundOrder", "arguments", Map.of("orderId", "O-42", "amount", 4500))
+                    : Map.of("toolName", "getOrder", "arguments", Map.of("orderId", "O-42"));
+            return new ModelResponse(null, Map.of("toolProposal", proposal, "inputFingerprint", digest), id(), request.model(), usage, 7, requestId);
+        }
         return request.structuredOutput()
                 ? new ModelResponse(null, Map.of("recommendation", text, "inputFingerprint", digest), id(), request.model(), usage, 7, requestId)
                 : new ModelResponse(text, null, id(), request.model(), usage, 7, requestId);

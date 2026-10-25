@@ -33,16 +33,17 @@ public class TaskTransactions {
     private final CompensationExecutionRepository compensations;
     private final SagaCoordinator sagas;
     private final ActivityInputPreparation inputPreparation;
+    private final List<ActivityCompletionParticipant> completionParticipants;
 
     public TaskTransactions(ActivityTaskRepository tasks, ActivityExecutionRepository activities,
                             WorkflowRunRepository runs, WorkflowDefinitionRepository definitions,
                             JdbcTemplate jdbc, WorkerLeaseSettings leases, RetryPolicy retryPolicy,
                             RetryDelayCalculator retryDelays, FailureClassifier classifier, WorkflowHistoryWriter history,
-                            CompensationExecutionRepository compensations, SagaCoordinator sagas, ActivityInputPreparation inputPreparation) {
+                            CompensationExecutionRepository compensations, SagaCoordinator sagas, ActivityInputPreparation inputPreparation, List<ActivityCompletionParticipant> completionParticipants) {
         this.tasks = tasks; this.activities = activities; this.runs = runs;
         this.definitions = definitions; this.jdbc = jdbc; this.leases = leases;
         this.retryPolicy = retryPolicy; this.retryDelays = retryDelays; this.classifier = classifier;
-        this.history = history; this.compensations = compensations; this.sagas = sagas; this.inputPreparation = inputPreparation;
+        this.history = history; this.compensations = compensations; this.sagas = sagas; this.inputPreparation = inputPreparation; this.completionParticipants = List.copyOf(completionParticipants);
     }
 
     public Optional<ClaimedTask> claim(String workerId) {
@@ -120,6 +121,9 @@ public class TaskTransactions {
         var activity = runningExecution(claim);
         activity.markCompleted(output, databaseNow());
         finish(claim, ActivityTaskStatus.COMPLETED);
+        if (activity instanceof ActivityExecutionEntity forward) {
+            for (var participant : completionParticipants) participant.completed(forward, output);
+        }
         history.append(claim.runId(), claim.activityExecutionId(),
                 claim.isCompensation() ? WorkflowEventType.COMPENSATION_COMPLETED : WorkflowEventType.ACTIVITY_COMPLETED,
                 executionData(claim, Map.of("generation", claim.leaseGeneration(), "attemptCount", activity.getAttemptCount())));

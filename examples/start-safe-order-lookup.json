@@ -1,0 +1,20 @@
+{
+  "workflowName": "SafeOrderLookup",
+  "version": 1,
+  "input": {
+    "modelRequest": {
+      "requestVersion": 1,
+      "provider": "fake",
+      "model": "fake-tool-read-v1",
+      "systemInstructions": "Propose one structured tool request for server-side validation and human review.",
+      "userContent": "Read order O-42.",
+      "temperature": 0.0,
+      "maxOutputTokens": 256,
+      "structuredOutput": true
+    },
+    "toolBinding": {
+      "sourceNodeId": "recommendation",
+      "executeNodeId": "execute"
+    }
+  }
+}

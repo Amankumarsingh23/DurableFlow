@@ -7,5 +7,7 @@ import java.util.Map;
  */
 public interface ActivityHandler {
     String type();
+    /** Handlers requiring fenced completion must not run through the legacy local runner. */
+    default boolean requiresDurableWorker() { return false; }
     Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input) throws Exception;
 }
