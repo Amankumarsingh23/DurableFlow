@@ -1,5 +1,7 @@
 package io.durableflow.workflow.run;
 
+import io.durableflow.workflow.child.ChildSettings;
+import io.durableflow.workflow.child.ChildWorkflowRepository;
 import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
@@ -27,11 +29,14 @@ public class WorkflowRunService {
     private final WorkflowTimerRepository timers;
     private final SignalRepository signals;
     private final CompensationExecutionRepository compensations;
+    private final ChildSettings childSettings;
+    private final ChildWorkflowRepository children;
 
     public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
                               WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
                               WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals,
-                              CompensationExecutionRepository compensations) {
+                              CompensationExecutionRepository compensations, ChildSettings childSettings,
+                              ChildWorkflowRepository children) {
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
@@ -40,17 +45,26 @@ public class WorkflowRunService {
         this.clock = clock;
         this.history = history;
         this.timers = timers;
-        this.signals = signals; this.compensations = compensations;
+        this.signals = signals; this.compensations = compensations; this.childSettings = childSettings; this.children = children;
     }
 
     @Transactional
     public WorkflowRunResponse start(StartWorkflowRunRequest request) {
+        return startAtDepth(request, 0);
+    }
+
+    @Transactional
+    public WorkflowRunResponse startAtDepth(StartWorkflowRunRequest request, int depth) {
+        if (depth < 0 || depth > childSettings.maxDepth()) {
+            throw new ApiException(HttpStatus.CONFLICT, "Maximum child workflow depth exceeded");
+        }
         if (request == null || !validator.validate(request).isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Workflow name, positive version and input object are required");
         }
         var definition = definitions.get(request.workflowName().strip(), request.version());
         Instant now = clock.instant();
         var run = new WorkflowRunEntity();
+        run.setChildDepth(depth);
         run.setWorkflowDefinitionId(definition.id());
         run.setStatus(WorkflowRunStatus.RUNNING);
         run.setInputJson(request.input());
@@ -89,6 +103,6 @@ public class WorkflowRunService {
         return new WorkflowRunResponse(run.getId(), definition.getName(), definition.getVersion(),
                 run.getStatus(), run.getInputJson(), states, timers.findByRun(runId), signals.waits(runId),
                 compensations.findByWorkflowRunIdOrderByCreatedAtAsc(runId).stream()
-                        .map(CompensationState::from).toList());
+                        .map(CompensationState::from).toList(), children.findByParent(runId));
     }
 }

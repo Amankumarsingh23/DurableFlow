@@ -1,5 +1,6 @@
 package io.durableflow.workflow.definition;
 
+import io.durableflow.workflow.child.ChildDefinitionGuard;
 import io.durableflow.api.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -10,10 +11,11 @@ import java.time.Instant;
 public class WorkflowDefinitionService {
     private final WorkflowDefinitionRepository definitions;
     private final WorkflowDefinitionValidator validator;
+    private final ChildDefinitionGuard children;
 
-    public WorkflowDefinitionService(WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator) {
+    public WorkflowDefinitionService(WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator, ChildDefinitionGuard children) {
         this.definitions = definitions;
-        this.validator = validator;
+        this.validator = validator; this.children = children;
     }
 
     @Transactional
@@ -22,6 +24,7 @@ public class WorkflowDefinitionService {
         if (definitions.findByNameAndVersion(normalized.name(), normalized.version()).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "Workflow name/version already registered");
         }
+        children.validate(normalized);
         var entity = new WorkflowDefinitionEntity();
         entity.setName(normalized.name());
         entity.setVersion(normalized.version());

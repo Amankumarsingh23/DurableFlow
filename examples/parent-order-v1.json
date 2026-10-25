@@ -1,0 +1,27 @@
+{
+  "name": "ParentOrder",
+  "version": 1,
+  "steps": [
+    {
+      "id": "submit",
+      "activity": "submitRequest",
+      "dependsOn": []
+    },
+    {
+      "id": "shipping",
+      "type": "CHILD_WORKFLOW",
+      "childWorkflow": "ShippingChild",
+      "childVersion": 1,
+      "dependsOn": [
+        "submit"
+      ]
+    },
+    {
+      "id": "finalize",
+      "activity": "finalizeRequest",
+      "dependsOn": [
+        "shipping"
+      ]
+    }
+  ]
+}

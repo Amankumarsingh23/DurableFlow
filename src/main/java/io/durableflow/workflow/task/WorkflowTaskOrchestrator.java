@@ -1,5 +1,8 @@
 package io.durableflow.workflow.task;
 
+import io.durableflow.workflow.child.ChildCoordinator;
+import io.durableflow.workflow.child.ChildOutcomeObserver;
+import io.durableflow.workflow.child.ChildWorkflow;
 import io.durableflow.api.ApiException;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
@@ -32,17 +35,20 @@ public class WorkflowTaskOrchestrator {
     private final SignalRepository signals;
     private final SignalWaitCoordinator signalWaits;
     private final SagaCoordinator sagas;
+    private final ChildCoordinator children;
+    private final ChildOutcomeObserver childOutcomes;
 
     public WorkflowTaskOrchestrator(WorkflowRunRepository runs, ActivityExecutionRepository activities,
             WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator,
             ActivityTaskRepository tasks, WorkflowRunService runService, Clock clock, WorkflowHistoryWriter history,
             WorkflowTimerRepository timers, SignalRepository signals, SignalWaitCoordinator signalWaits,
-            SagaCoordinator sagas) {
+            SagaCoordinator sagas, ChildCoordinator children,
+            ChildOutcomeObserver childOutcomes) {
         this.runs = runs; this.activities = activities; this.definitions = definitions;
         this.validator = validator; this.tasks = tasks; this.runService = runService; this.clock = clock;
         this.history = history;
         this.timers = timers;
-        this.signals = signals; this.signalWaits = signalWaits; this.sagas = sagas;
+        this.signals = signals; this.signalWaits = signalWaits; this.sagas = sagas; this.children = children; this.childOutcomes = childOutcomes;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
@@ -55,10 +61,11 @@ public class WorkflowTaskOrchestrator {
     public WorkflowRunResponse advanceInTransaction(UUID runId) {
         var run = runs.findByIdForUpdate(runId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Workflow run not found"));
+        var childRows = childOutcomes.refresh(runId);
+        if (run.getStatus() != WorkflowRunStatus.RUNNING && run.getStatus() != WorkflowRunStatus.COMPENSATING) return runService.get(runId);
         if (run.getStatus() == WorkflowRunStatus.COMPENSATING) {
             sagas.advance(run); return runService.get(runId);
         }
-        if (run.getStatus() != WorkflowRunStatus.RUNNING) return runService.get(runId);
         var rows = activities.findByWorkflowRunIdOrderByActivityIdAsc(runId);
         var queued = tasks.findByRunId(runId).stream().filter(task -> !task.isCompensation())
                 .collect(Collectors.toMap(ActivityTaskEntity::getActivityExecutionId, Function.identity()));
@@ -79,15 +86,26 @@ public class WorkflowTaskOrchestrator {
         }
         var timerRows = timers.findByRun(runId).stream().collect(Collectors.toMap(WorkflowTimer::timerId, Function.identity()));
         var waits = signals.waits(runId).stream().collect(Collectors.toMap(SignalWait::signalNodeId, Function.identity()));
-        var satisfaction = new NodeSatisfaction(steps, byId, timerRows, waits);
-        if (rows.stream().anyMatch(a -> a.getStatus() == ActivityExecutionStatus.FAILED)) {
-            sagas.forwardFailed(run, "ACTIVITY_FAILURE");
+        var childNodes = childRows.stream().map(ChildWorkflow::childNodeId).collect(Collectors.toSet());
+        var satisfaction = new NodeSatisfaction(steps, byId, timerRows, waits, childRows.stream()
+                .collect(Collectors.toMap(ChildWorkflow::childNodeId, Function.identity())));
+        if (rows.stream().anyMatch(a -> a.getStatus() == ActivityExecutionStatus.FAILED)
+                || childRows.stream().anyMatch(ChildWorkflow::failed)) {
+            sagas.forwardFailed(run, childRows.stream().anyMatch(ChildWorkflow::failed)
+                    ? "CHILD_WORKFLOW_FAILURE" : "ACTIVITY_FAILURE");
         } else {
             boolean newlySatisfied;
             do {
                 newlySatisfied = false;
                 for (var step : steps) {
                     if (satisfaction.satisfied(step.id())) continue;
+                    if (step.type() == NodeType.CHILD_WORKFLOW) {
+                        if (!childNodes.contains(step.id()) && satisfaction.dependenciesSatisfied(step)) {
+                            if (!children.materialize(run, step)) return runService.get(runId);
+                            childNodes.add(step.id());
+                        }
+                        continue;
+                    }
                     if (step.type() == NodeType.SIGNAL) {
                         if (satisfaction.dependenciesSatisfied(step)) {
                             var prior = waits.get(step.id());

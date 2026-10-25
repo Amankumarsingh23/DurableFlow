@@ -6,11 +6,15 @@ import java.util.List;
 public record StepDefinition(
         @NotBlank @Size(max = 200) String id,
         String activity,
-        List<@NotBlank String> dependsOn, NodeType type, Long delayMillis, String compensation) {
+        List<@NotBlank String> dependsOn, NodeType type, Long delayMillis, String compensation, String childWorkflow, Integer childVersion,
+        java.util.Map<String, Object> childInput) {
     public StepDefinition {
         // Omitted dependencies mean a root. Keep null entries for validation to reject.
         if (dependsOn == null) dependsOn = List.of();
         if (type == null) type = NodeType.ACTIVITY;
+    }
+    public StepDefinition(String id, String activity, List<String> dependsOn, NodeType type, Long delayMillis, String compensation) {
+        this(id, activity, dependsOn, type, delayMillis, compensation, null, null, null);
     }
     public StepDefinition(String id, String activity, List<String> dependsOn, NodeType type, Long delayMillis) {
         this(id, activity, dependsOn, type, delayMillis, null);

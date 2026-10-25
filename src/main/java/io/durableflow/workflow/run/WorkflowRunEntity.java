@@ -37,6 +37,11 @@ public class WorkflowRunEntity {
     @Column(name = "completed_at", nullable = true)
     private Instant completedAt;
 
+    @Column(name = "child_depth", nullable = false)
+    private int childDepth;
+    public int getChildDepth() { return childDepth; }
+    public void setChildDepth(int depth) { childDepth = depth; }
+
     public WorkflowRunEntity() {}
 
     public void markCompleted(Instant now) {

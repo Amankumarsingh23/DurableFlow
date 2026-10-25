@@ -71,7 +71,7 @@ public class WorkflowEngineState {
             return noProgress(run, "Stored workflow definition is invalid");
         }
         if (steps.stream().anyMatch(step -> step.type() != NodeType.ACTIVITY || step.compensation() != null)) {
-            throw new ApiException(HttpStatus.CONFLICT, "Timer, signal and Saga workflows require advance and queued execution");
+            throw new ApiException(HttpStatus.CONFLICT, "Timer, signal, child and Saga workflows require advance and queued execution");
         }
         var byId = rows.stream().collect(Collectors.toMap(ActivityExecutionEntity::getActivityId, Function.identity()));
         Set<String> expectedIds = steps.stream().map(StepDefinition::id).collect(Collectors.toSet());

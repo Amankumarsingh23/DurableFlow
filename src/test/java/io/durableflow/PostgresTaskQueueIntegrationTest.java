@@ -59,7 +59,7 @@ class PostgresTaskQueueIntegrationTest {
     @BeforeEach
     void resetIsolatedTestDatabase() {
         // This class owns its own container, and no poller runs in the server test profile.
-        jdbc.execute("TRUNCATE compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
+        jdbc.execute("TRUNCATE workflow_schedule_occurrence, workflow_schedule, child_workflow_execution, compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");
     }
 
     @Test
@@ -315,6 +315,9 @@ class PostgresTaskQueueIntegrationTest {
             assertThat(workerContext.containsBean("workflowDefinitionController")).isFalse();
             assertThat(workerContext.containsBean("workflowExecutionController")).isFalse();
             assertThat(workerContext.containsBean("signalController")).isFalse();
+            assertThat(workerContext.containsBean("scheduleController")).isFalse();
+            assertThat(workerContext.getBeansOfType(io.durableflow.config.CompositionPollingConfiguration.ChildPoller.class)).isEmpty();
+            assertThat(workerContext.getBeansOfType(io.durableflow.config.CompositionPollingConfiguration.SchedulePoller.class)).isEmpty();
             assertThat(workerContext.getBeansOfType(io.durableflow.workflow.timer.TimerPollingConfiguration.TimerPoller.class)).isEmpty();
             assertThat(workerContext.getBean(ActivityRegistry.class)).isNotSameAs(serverRegistry);
             assertThat(workerContext.getBean(TaskWorker.class).runOne()).isTrue();

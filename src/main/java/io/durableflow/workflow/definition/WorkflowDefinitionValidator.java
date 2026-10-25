@@ -21,7 +21,15 @@ public class WorkflowDefinitionValidator {
                     || !step.compensation().strip().matches("[A-Za-z][A-Za-z0-9_.-]{0,199}"))) {
                 throw invalid("Compensation must be an ACTIVITY handler name of 1-200 characters");
             }
-            if (step.type() == NodeType.ACTIVITY) {
+            if (step.type() != NodeType.CHILD_WORKFLOW && (step.childWorkflow() != null || step.childVersion() != null || step.childInput() != null)) {
+                throw invalid("Child fields require CHILD_WORKFLOW");
+            }
+            if (step.type() == NodeType.CHILD_WORKFLOW) {
+                if (step.childWorkflow() == null || step.childWorkflow().isBlank() || step.childWorkflow().strip().length() > 200
+                        || step.childVersion() == null || step.childVersion() < 1 || step.activity() != null || step.delayMillis() != null) {
+                    throw invalid("CHILD_WORKFLOW requires an exact childWorkflow/childVersion and no activity/delayMillis");
+                }
+            } else if (step.type() == NodeType.ACTIVITY) {
                 if (step.activity() == null || step.activity().isBlank() || step.delayMillis() != null) {
                     throw invalid("ACTIVITY requires activity and must not specify delayMillis");
                 }
@@ -38,7 +46,8 @@ public class WorkflowDefinitionValidator {
         var steps = request.steps().stream()
                 .map(step -> new StepDefinition(step.id().strip(), step.type() == NodeType.ACTIVITY ? step.activity().strip() : null,
                         step.dependsOn().stream().map(String::strip).distinct().toList(), step.type(), step.delayMillis(),
-                        step.compensation() == null ? null : step.compensation().strip()))
+                        step.compensation() == null ? null : step.compensation().strip(),
+                        step.childWorkflow() == null ? null : step.childWorkflow().strip(), step.childVersion(), step.childInput()))
                 .toList();
         var normalized = new RegisterWorkflowDefinitionRequest(request.name().strip(), request.version(), steps);
         validateGraph(steps);

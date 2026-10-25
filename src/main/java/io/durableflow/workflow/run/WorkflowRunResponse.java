@@ -1,5 +1,6 @@
 package io.durableflow.workflow.run;
 
+import io.durableflow.workflow.child.ChildWorkflow;
 import io.durableflow.workflow.activity.ActivityExecutionStatus;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,12 @@ import io.durableflow.workflow.compensation.CompensationState;
 
 public record WorkflowRunResponse(
         UUID runId, String workflowName, int version, WorkflowRunStatus status,
-        Map<String, Object> input, List<ActivityState> activities, List<WorkflowTimer> timers, List<SignalWait> signalWaits, List<CompensationState> compensations) {
+        Map<String, Object> input, List<ActivityState> activities, List<WorkflowTimer> timers, List<SignalWait> signalWaits, List<CompensationState> compensations, List<ChildWorkflow> children) {
+    public WorkflowRunResponse(UUID runId, String workflowName, int version, WorkflowRunStatus status,
+            Map<String, Object> input, List<ActivityState> activities, List<WorkflowTimer> timers, List<SignalWait> signalWaits,
+            List<CompensationState> compensations) {
+        this(runId, workflowName, version, status, input, activities, timers, signalWaits, compensations, List.of());
+    }
     public WorkflowRunResponse(UUID runId, String workflowName, int version, WorkflowRunStatus status,
                                Map<String, Object> input, List<ActivityState> activities, List<WorkflowTimer> timers, List<SignalWait> signalWaits) {
         this(runId, workflowName, version, status, input, activities, timers, signalWaits, List.of());

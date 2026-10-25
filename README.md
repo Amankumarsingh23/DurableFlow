@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 20 adds [durable child workflows](docs/child-workflows.md) and
+[one-time/fixed-interval workflow schedules](docs/workflow-schedules.md). Child runs pin exact
+versions and wait through database relationships; schedules use durable occurrence identity
+and bounded catch-up. V10 adds these models and run depth; V1-V9 remain unchanged. New
+PostgreSQL concurrency/restart/rollback tests are added but remain runtime unverified because
+Java, Maven and Docker are unavailable on PATH. See the linked designs for demos and limits.
+
 A durable workflow orchestration engine built incrementally for learning and SDE interview preparation.
 
 DurableFlow separates orchestration from activity execution through a durable PostgreSQL task queue. Independent non-HTTP workers use FOR UPDATE SKIP LOCKED, renewable leases and heartbeats; expired claims can be reclaimed, and stale worker results are rejected. Stable activity keys support provider idempotency, and explicitly transient failures receive durable bounded retries with backoff and jitter. Earlier synchronous development/recovery endpoints remain available for unqueued runs. See [retry design and verification](docs/retries.md). Runtime verification, the two-worker demo and a manual JVM-crash experiment remain outstanding.

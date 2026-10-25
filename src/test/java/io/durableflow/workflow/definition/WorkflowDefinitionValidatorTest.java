@@ -33,6 +33,22 @@ class WorkflowDefinitionValidatorTest {
     }
 
     @Test
+    void childNodesRequirePinnedVersionAndBoundedLiteralInputAndRoundTrip() {
+        var child = new StepDefinition("shipping", null, List.of(), NodeType.CHILD_WORKFLOW, null, null, " Shipping ", 2, java.util.Map.of("region", "IN"));
+        var normalized = validator.normalizeAndValidate(request(List.of(child, step("finish", "shipping"))));
+        assertThat(normalized.steps().getFirst().childWorkflow()).isEqualTo("Shipping");
+        assertThat(WorkflowDefinitionDocument.steps(WorkflowDefinitionDocument.encode(normalized))).isEqualTo(normalized.steps());
+        for (var invalid : List.of(
+                new StepDefinition("x", null, List.of(), NodeType.CHILD_WORKFLOW, null, null, "Shipping", 0, null),
+                new StepDefinition("x", null, List.of(), NodeType.CHILD_WORKFLOW, null, null, null, 1, null),
+                new StepDefinition("x", "handler", List.of(), NodeType.CHILD_WORKFLOW, null, null, "Shipping", 1, null),
+                new StepDefinition("x", null, List.of(), NodeType.CHILD_WORKFLOW, null, "undo", "Shipping", 1, null),
+                new StepDefinition("x", "handler", List.of(), NodeType.ACTIVITY, null, null, "Shipping", 1, null))) {
+            assertThatThrownBy(() -> validator.normalizeAndValidate(request(List.of(invalid)))).isInstanceOf(ApiException.class);
+        }
+    }
+
+    @Test
     void compensationRoundTripsAndAcceptsStaticDags() {
         var payment = new StepDefinition("payment", "chargePayment", List.of(), NodeType.ACTIVITY, null, " refundPayment ");
         var valid = validator.normalizeAndValidate(request(List.of(step("shipment", "payment"), payment)));

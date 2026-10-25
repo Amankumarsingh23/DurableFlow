@@ -24,3 +24,11 @@ durableflow:
   timers:
     polling-enabled: ${TIMER_POLLING_ENABLED:true}
     poll-delay-ms: ${TIMER_POLL_DELAY_MS:500}
+  children:
+    polling-enabled: ${CHILD_POLLING_ENABLED:true}
+    poll-delay-ms: ${CHILD_POLL_DELAY_MS:500}
+    max-depth: ${CHILD_MAX_DEPTH:8}
+  schedules:
+    polling-enabled: ${SCHEDULE_POLLING_ENABLED:true}
+    poll-delay-ms: ${SCHEDULE_POLL_DELAY_MS:500}
+    max-catch-up-occurrences: ${SCHEDULE_MAX_CATCH_UP:10}

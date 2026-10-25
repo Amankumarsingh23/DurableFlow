@@ -1,5 +1,7 @@
 package io.durableflow.workflow.compensation;
 
+import io.durableflow.workflow.child.ChildWorkflowRepository;
+import io.durableflow.workflow.child.ChildOutcomeObserver;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.definition.*;
 import io.durableflow.workflow.run.*;
@@ -22,15 +24,19 @@ public class SagaCoordinator {
     private final ActivityTaskRepository tasks;
     private final WorkflowHistoryWriter history;
     private final Clock clock;
+    private final ChildWorkflowRepository children;
+    private final ChildOutcomeObserver childOutcomes;
 
     public SagaCoordinator(ActivityExecutionRepository activities, CompensationExecutionRepository compensations,
             WorkflowDefinitionRepository definitions, WorkflowDefinitionValidator validator,
-            ActivityTaskRepository tasks, WorkflowHistoryWriter history, Clock clock) {
+            ActivityTaskRepository tasks, WorkflowHistoryWriter history, Clock clock, ChildWorkflowRepository children,
+            ChildOutcomeObserver childOutcomes) {
         this.activities = activities; this.compensations = compensations; this.definitions = definitions;
-        this.validator = validator; this.tasks = tasks; this.history = history; this.clock = clock;
+        this.validator = validator; this.tasks = tasks; this.history = history; this.clock = clock; this.children = children; this.childOutcomes = childOutcomes;
     }
 
     public void forwardFailed(WorkflowRunEntity run, String code) {
+        childOutcomes.refresh(run.getId());
         if (run.getStatus() == WorkflowRunStatus.COMPENSATING) { advance(run); return; }
         if (run.getStatus() != WorkflowRunStatus.RUNNING) return;
         if (plan(run).isEmpty() && !(hasRunningForward(run) && steps(run).stream().anyMatch(s -> s.compensation() != null))) {
@@ -45,6 +51,7 @@ public class SagaCoordinator {
 
     public void advance(WorkflowRunEntity run) {
         if (run.getStatus() != WorkflowRunStatus.COMPENSATING) return;
+        childOutcomes.refresh(run.getId());
         // Freeze the compensation set only after every already-started forward execution settles.
         // No new PENDING forward execution may start; bounded retry/reclaim may resolve RUNNING work.
         if (hasRunningForward(run)) return;
@@ -84,7 +91,7 @@ public class SagaCoordinator {
     }
 
     private boolean hasRunningForward(WorkflowRunEntity run) {
-        return activities.findByWorkflowRunIdOrderByActivityIdAsc(run.getId()).stream()
+        return children.hasActiveChildren(run.getId()) || activities.findByWorkflowRunIdOrderByActivityIdAsc(run.getId()).stream()
                 .anyMatch(a -> a.getStatus() == ActivityExecutionStatus.RUNNING);
     }
 
