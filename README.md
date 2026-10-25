@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 21 adds [durable model activities and an agent workflow demo](docs/ai-model-gateway.md).
+A provider-neutral ModelGateway delegates to a deterministic fake; modelCall uses the existing
+worker reliability path with versioned durable requests and persisted result/usage metadata.
+Generation, the SIGNAL review gate and the configured idempotent demo action remain separate.
+No provider SDK, API key, schema change or autonomous agent loop is introduced. Runtime
+verification remains blocked by unavailable Java/Maven/Docker; static checks are separate.
+
 Session 20 adds [durable child workflows](docs/child-workflows.md) and
 [one-time/fixed-interval workflow schedules](docs/workflow-schedules.md). Child runs pin exact
 versions and wait through database relationships; schedules use durable occurrence identity

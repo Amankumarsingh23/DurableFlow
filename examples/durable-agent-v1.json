@@ -1,0 +1,32 @@
+{
+  "name": "DurableAgent",
+  "version": 1,
+  "steps": [
+    {
+      "id": "prepare",
+      "activity": "submitRequest",
+      "dependsOn": []
+    },
+    {
+      "id": "recommendation",
+      "activity": "modelCall",
+      "dependsOn": [
+        "prepare"
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "SIGNAL",
+      "dependsOn": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "action",
+      "activity": "applyApprovedAction",
+      "dependsOn": [
+        "approval"
+      ]
+    }
+  ]
+}

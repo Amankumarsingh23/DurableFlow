@@ -1,0 +1,20 @@
+{
+  "workflowName": "DurableAgent",
+  "version": 1,
+  "input": {
+    "modelRequest": {
+      "requestVersion": 1,
+      "provider": "fake",
+      "model": "fake-recommendation-v1",
+      "systemInstructions": "Recommend a safe next step. A human will review the result before the configured action.",
+      "userContent": "Order DF-21 is ready for a recommendation. This supplied context is a deterministic demo, not retrieved data.",
+      "temperature": 0.0,
+      "maxOutputTokens": 256,
+      "structuredOutput": true
+    },
+    "approvedAction": {
+      "name": "markReviewed",
+      "target": "ORDER-DF-21"
+    }
+  }
+}
