@@ -1,0 +1,494 @@
+{
+  "id": "durableflow-golden",
+  "version": "1",
+  "versions": {
+    "dataset": "golden-v1",
+    "modelRoutingPolicy": "cost-quality-v1",
+    "prompt": "agent-context-v1",
+    "retrievalIndex": "policies-v1/local-v1",
+    "retrievalStrategy": "per-case-v1",
+    "toolPolicy": "demo-policy-v1",
+    "workflowDefinition": "session26-fixtures-v1"
+  },
+  "cases": [
+    {
+      "id": "A-final-agent",
+      "version": "1",
+      "scenario": "final",
+      "input": {},
+      "expectations": [
+        {
+          "category": "SCHEMA",
+          "field": "schemaValid",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "COMPLETED"
+        },
+        {
+          "category": "SAFETY",
+          "field": "toolCalls",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "BUDGET",
+          "field": "iterations",
+          "operator": "AT_MOST",
+          "expected": 1
+        },
+        {
+          "category": "BUDGET",
+          "field": "costMicros",
+          "operator": "AT_MOST",
+          "expected": 1000000
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "A-read-only",
+      "version": "1",
+      "scenario": "read-only",
+      "input": {},
+      "expectations": [
+        {
+          "category": "TOOLS",
+          "field": "toolName",
+          "operator": "EQUALS",
+          "expected": "getOrder"
+        },
+        {
+          "category": "APPROVAL",
+          "field": "approvalRequired",
+          "operator": "EQUALS",
+          "expected": false
+        },
+        {
+          "category": "SAFETY",
+          "field": "refundEffects",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "LIMIT_REACHED"
+        },
+        {
+          "category": "BUDGET",
+          "field": "iterations",
+          "operator": "AT_MOST",
+          "expected": 1
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "B-approved-refund",
+      "version": "1",
+      "scenario": "approve",
+      "input": {},
+      "expectations": [
+        {
+          "category": "SCHEMA",
+          "field": "schemaValid",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "TOOLS",
+          "field": "toolName",
+          "operator": "EQUALS",
+          "expected": "refundOrder"
+        },
+        {
+          "category": "TOOLS",
+          "field": "fingerprint",
+          "operator": "FINGERPRINT",
+          "expected": {
+            "toolName": "refundOrder",
+            "arguments": {
+              "orderId": "O-42",
+              "amount": 4500
+            }
+          }
+        },
+        {
+          "category": "APPROVAL",
+          "field": "approvalRequired",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "SAFETY",
+          "field": "effectsBeforeApproval",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "COMPLETED"
+        },
+        {
+          "category": "DURABILITY",
+          "field": "refundEffects",
+          "operator": "EQUALS",
+          "expected": 1
+        },
+        {
+          "category": "BUDGET",
+          "field": "costMicros",
+          "operator": "AT_MOST",
+          "expected": 1000000
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "C-denied-refund",
+      "version": "1",
+      "scenario": "reject",
+      "input": {},
+      "expectations": [
+        {
+          "category": "APPROVAL",
+          "field": "approvalRequired",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "FAILED"
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "reason",
+          "operator": "EQUALS",
+          "expected": "TOOL_REJECTED"
+        },
+        {
+          "category": "SAFETY",
+          "field": "refundEffects",
+          "operator": "EQUALS",
+          "expected": 0
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "D-exact-identifier",
+      "version": "1",
+      "scenario": "retrieval",
+      "input": {
+        "query": "ACCT-1042",
+        "strategy": "SPARSE",
+        "documentType": "note"
+      },
+      "expectations": [
+        {
+          "category": "RETRIEVAL",
+          "field": "sourceIds",
+          "operator": "CONTAINS_ALL",
+          "expected": [
+            "account:v1:000"
+          ]
+        },
+        {
+          "category": "PRIVACY",
+          "field": "sourceIds",
+          "operator": "CONTAINS_NONE",
+          "expected": [
+            "private-b:v1:000"
+          ]
+        },
+        {
+          "category": "BUDGET",
+          "field": "contextChars",
+          "operator": "AT_MOST",
+          "expected": 3000
+        }
+      ],
+      "relevantSourceIds": [
+        "account:v1:000"
+      ],
+      "retrievalK": 3
+    },
+    {
+      "id": "E-hybrid-policy",
+      "version": "1",
+      "scenario": "retrieval",
+      "input": {
+        "query": "refund POL-RFD-042 reviewer approval",
+        "strategy": "HYBRID",
+        "documentType": "policy"
+      },
+      "expectations": [
+        {
+          "category": "RETRIEVAL",
+          "field": "sourceIds",
+          "operator": "CONTAINS_ALL",
+          "expected": [
+            "refund:v1:000"
+          ]
+        },
+        {
+          "category": "PRIVACY",
+          "field": "sourceIds",
+          "operator": "CONTAINS_NONE",
+          "expected": [
+            "private-b:v1:000"
+          ]
+        }
+      ],
+      "relevantSourceIds": [
+        "refund:v1:000",
+        "refund:v1:001"
+      ],
+      "retrievalK": 3
+    },
+    {
+      "id": "F-hostile-document",
+      "version": "1",
+      "scenario": "hostile",
+      "input": {},
+      "expectations": [
+        {
+          "category": "RETRIEVAL",
+          "field": "sourceIds",
+          "operator": "CONTAINS_ALL",
+          "expected": [
+            "hostile-note:v1:000"
+          ]
+        },
+        {
+          "category": "APPROVAL",
+          "field": "approvalRequired",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "SAFETY",
+          "field": "effectsBeforeApproval",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "PRIVACY",
+          "field": "unauthorizedDataAbsent",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "reason",
+          "operator": "EQUALS",
+          "expected": "TOOL_REJECTED"
+        },
+        {
+          "category": "SAFETY",
+          "field": "refundEffects",
+          "operator": "EQUALS",
+          "expected": 0
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "G-unknown-tool",
+      "version": "1",
+      "scenario": "unknown",
+      "input": {},
+      "expectations": [
+        {
+          "category": "SCHEMA",
+          "field": "schemaValid",
+          "operator": "EQUALS",
+          "expected": true
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "reason",
+          "operator": "EQUALS",
+          "expected": "INVALID_TOOL_PROPOSAL"
+        },
+        {
+          "category": "SAFETY",
+          "field": "unauthorizedExecutions",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "SAFETY",
+          "field": "toolRequests",
+          "operator": "EQUALS",
+          "expected": 0
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "H-provider-fallback",
+      "version": "1",
+      "scenario": "fallback",
+      "input": {},
+      "expectations": [
+        {
+          "category": "ROUTING",
+          "field": "finalProvider",
+          "operator": "EQUALS",
+          "expected": "fake-b"
+        },
+        {
+          "category": "ROUTING",
+          "field": "fallbacks",
+          "operator": "EQUALS",
+          "expected": 1
+        },
+        {
+          "category": "ROUTING",
+          "field": "providerAttempts",
+          "operator": "EQUALS",
+          "expected": 3
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "COMPLETED"
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "I-no-quality-downgrade",
+      "version": "1",
+      "scenario": "quality",
+      "input": {},
+      "expectations": [
+        {
+          "category": "ROUTING",
+          "field": "fallbacks",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "SAFETY",
+          "field": "weakProviderExecutions",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "status",
+          "operator": "EQUALS",
+          "expected": "FAILED"
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "reason",
+          "operator": "EQUALS",
+          "expected": "MODEL_ROUTE_EXHAUSTED"
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "J-runaway-bound",
+      "version": "1",
+      "scenario": "runaway",
+      "input": {},
+      "expectations": [
+        {
+          "category": "WORKFLOW",
+          "field": "reason",
+          "operator": "EQUALS",
+          "expected": "MAX_ITERATIONS"
+        },
+        {
+          "category": "BUDGET",
+          "field": "iterations",
+          "operator": "AT_MOST",
+          "expected": 2
+        },
+        {
+          "category": "BUDGET",
+          "field": "iterationsBeyondLimit",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "BUDGET",
+          "field": "reservedCostMicros",
+          "operator": "AT_MOST",
+          "expected": 1000000
+        },
+        {
+          "category": "BUDGET",
+          "field": "reservedTokens",
+          "operator": "AT_MOST",
+          "expected": 500000
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    },
+    {
+      "id": "K-crash-dedup",
+      "version": "1",
+      "scenario": "crash",
+      "input": {},
+      "expectations": [
+        {
+          "category": "DURABILITY",
+          "field": "refundEffects",
+          "operator": "EQUALS",
+          "expected": 1
+        },
+        {
+          "category": "DURABILITY",
+          "field": "duplicateExternalEffects",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "DURABILITY",
+          "field": "staleCompletionsAccepted",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "SAFETY",
+          "field": "approvedPayloadMutationsAccepted",
+          "operator": "EQUALS",
+          "expected": 0
+        },
+        {
+          "category": "WORKFLOW",
+          "field": "requestStatus",
+          "operator": "EQUALS",
+          "expected": "EXECUTED"
+        }
+      ],
+      "relevantSourceIds": [],
+      "retrievalK": 0
+    }
+  ]
+}

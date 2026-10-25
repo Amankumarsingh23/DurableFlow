@@ -5,16 +5,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import java.util.*;
+import io.durableflow.observability.*;
 
 /** Bounded database transitions only; never invokes a provider. */
 @Service
 public class RouteTransactions {
     public record Ticket(UUID id,UUID activityId,ModelDescriptor descriptor,int routeIndex,int attemptNumber,String code) {}
     private final ModelRouteRepository routes;private final JdbcTemplate jdbc;private final ProviderCircuitBreaker breaker;
-    public RouteTransactions(ModelRouteRepository routes,JdbcTemplate jdbc,ProviderCircuitBreaker breaker) {this.routes=routes;this.jdbc=jdbc;this.breaker=breaker;}
+    private final SafeTelemetry telemetry;
+    public RouteTransactions(ModelRouteRepository routes,JdbcTemplate jdbc,ProviderCircuitBreaker breaker) {this(routes,jdbc,breaker,SafeTelemetry.disabled());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public RouteTransactions(ModelRouteRepository routes,JdbcTemplate jdbc,ProviderCircuitBreaker breaker,SafeTelemetry telemetry) {this.routes=routes;this.jdbc=jdbc;this.breaker=breaker;this.telemetry=telemetry;}
     @Transactional(propagation=Propagation.MANDATORY)
     public void prepare(UUID activity,UUID agent,ModelRequest request,RouteDecision decision) {
-        var old=routes.find(activity);if(old.isEmpty())routes.insert(activity,agent,request,decision);
+        var old=routes.find(activity);if(old.isEmpty()) {routes.insert(activity,agent,request,decision);telemetry.count(Metric.MODEL_LOGICAL_CALLS,Map.of());}
         else if(!old.get().fingerprint().equals(ModelRouteRepository.fingerprint(request)))throw new IllegalArgumentException("MODEL_LOGICAL_REQUEST_CHANGED");
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW)
@@ -22,7 +26,7 @@ public class RouteTransactions {
         if(!owned(activity,owner,true))throw new IllegalStateException("MODEL_ROUTE_OWNERSHIP_LOST");
         UUID run=jdbc.queryForObject("SELECT workflow_run_id FROM activity_execution WHERE id=?",UUID.class,activity);
         jdbc.queryForObject("SELECT id FROM workflow_run WHERE id=? FOR UPDATE",UUID.class,run);
-        if(routes.find(activity).isEmpty())routes.insert(activity,null,request,decision);
+        if(routes.find(activity).isEmpty()) {routes.insert(activity,null,request,decision);telemetry.count(Metric.MODEL_LOGICAL_CALLS,Map.of());}
         if(!owned(activity,owner,false))throw new IllegalStateException("MODEL_ROUTE_OWNERSHIP_LOST");
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW)
@@ -71,11 +75,16 @@ public class RouteTransactions {
     }
     private Ticket ticket(ModelRouteRepository.Route r,String code) {return new Ticket(null,r.activityId(),null,r.activeIndex(),r.totalAttempts(),code);}
     private Ticket blocked(ModelRouteRepository.Route r,String code,String status) {
+        if(status.equals("EXHAUSTED"))telemetry.count(Metric.MODEL_EXHAUSTED,Map.of());
+        telemetry.event("MODEL_ROUTE_TERMINAL",Map.of("logicalModelCallId",r.activityId().toString(),"reason",code));
         jdbc.update("UPDATE model_route SET status=?,terminal_code=?,updated_at=clock_timestamp() WHERE activity_execution_id=?",status,code,r.activityId());return ticket(r,code);
     }
     private Ticket next(ModelRouteRepository.Route r,String reason) {
+        if(reason.equals("CIRCUIT_OPEN"))telemetry.count(Metric.MODEL_CIRCUIT_SKIPS,Map.of("provider",r.plan().candidates().get(r.activeIndex()).provider()));
         if(r.activeIndex()+1>=r.plan().candidates().size() || r.totalAttempts()>=r.plan().maxProviderAttempts())return blocked(r,"MODEL_ROUTE_EXHAUSTED","EXHAUSTED");
         jdbc.update("UPDATE model_route SET active_index=active_index+1,transition_reason=?,updated_at=clock_timestamp() WHERE activity_execution_id=?",reason,r.activityId());
+        telemetry.count(Metric.MODEL_FALLBACKS,Map.of("reason",reason));
+        telemetry.event("MODEL_FALLBACK",Map.of("logicalModelCallId",r.activityId().toString(),"reason",reason));
         return ticket(r,"MODEL_ROUTE_ADVANCED");
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW)
@@ -94,7 +103,7 @@ public class RouteTransactions {
         String outcome;
         if(!health)outcome=blocked(r,"MODEL_"+kind,"TERMINAL").code();
         else if(routes.routeAttempts(r.activityId(),r.activeIndex())>=r.plan().attemptsPerRoute() || r.totalAttempts()>=r.plan().maxProviderAttempts())outcome=next(r,"HEALTH_RETRIES_EXHAUSTED").code();
-        else outcome="MODEL_RETRY_SAME_ROUTE";
+        else {outcome="MODEL_RETRY_SAME_ROUTE";telemetry.count(Metric.MODEL_RETRIES,Map.of("provider",ticket.descriptor().provider()));}
         if(!owned(ticket.activityId(),owner,false))throw new IllegalStateException("MODEL_ROUTE_OWNERSHIP_LOST");
         return outcome;
     }

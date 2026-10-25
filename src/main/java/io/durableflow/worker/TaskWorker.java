@@ -21,6 +21,7 @@ public class TaskWorker {
     private final WorkerHeartbeats heartbeats;
     private final HandlerExecutions executions;
     private final WorkerExecutionSettings settings;
+    private final io.durableflow.observability.SafeTelemetry telemetry;
     private final Object lifecycle = new Object();
     private boolean draining;
     private int active;
@@ -29,6 +30,13 @@ public class TaskWorker {
     public TaskWorker(TaskTransactions transactions, ActivityRegistry registry,
                       WorkflowTaskOrchestrator orchestrator, WorkerIdentity identity, WorkerHeartbeats heartbeats,
                       HandlerExecutions executions, WorkerExecutionSettings settings) {
+        this(transactions,registry,orchestrator,identity,heartbeats,executions,settings,io.durableflow.observability.SafeTelemetry.disabled());
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public TaskWorker(TaskTransactions transactions,ActivityRegistry registry,WorkflowTaskOrchestrator orchestrator,
+            WorkerIdentity identity,WorkerHeartbeats heartbeats,HandlerExecutions executions,WorkerExecutionSettings settings,
+            io.durableflow.observability.SafeTelemetry telemetry) {
+        this.telemetry=telemetry;
         this.transactions = transactions; this.registry = registry;
         this.orchestrator = orchestrator; this.identity = identity;
         this.heartbeats = heartbeats;
@@ -59,9 +67,16 @@ public class TaskWorker {
         try {
             try {
                 session.ensureOwned();
-                output = ticket.execute(() -> Objects.requireNonNull(registry.require(claim.activityType()).execute(
-                        claim.context(), claim.input()),
-                        "Activity output must be a JSON object"));
+                output = ticket.execute(() -> {
+                    long started=System.nanoTime();String status="FAILURE";
+                    try {
+                        var result=Objects.requireNonNull(registry.require(claim.activityType()).execute(claim.context(),claim.input()),"Activity output must be a JSON object");
+                        status="SUCCESS";return result;
+                    } finally {
+                        var tags=Map.of("activity",claim.activityType(),"status",status);
+                        telemetry.duration(io.durableflow.observability.Metric.ACTIVITY_ATTEMPT_DURATION,System.nanoTime()-started,tags);
+                    }
+                });
             } catch (HandlerExecutions.Abandoned cancelled) {
                 throw new OwnershipLostException(claim);
             } catch (Exception failure) {

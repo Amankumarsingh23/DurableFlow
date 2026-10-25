@@ -4,13 +4,20 @@ import io.durableflow.ai.provider.*;
 import io.durableflow.worker.retry.RetryableActivityException;
 import org.springframework.stereotype.Service;
 import java.util.*;
+import io.durableflow.observability.*;
 
 /** One provider invocation per worker delivery; every retry/fallback goes through the existing queue. */
 @Service
 public class ModelRoutingService {
     private final ModelRouter router;private final RoutingPolicy policy;private final RouteTransactions transactions;
     private final ModelRouteRepository routes;private final ProviderCircuitBreaker breaker;private final Map<String,ModelProvider> providers;
+    private final SafeTelemetry telemetry;
     public ModelRoutingService(ModelRouter router,RoutingPolicy policy,RouteTransactions transactions,ModelRouteRepository routes,ProviderCircuitBreaker breaker,List<ModelProvider> providers) {
+        this(router,policy,transactions,routes,breaker,providers,SafeTelemetry.disabled());
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public ModelRoutingService(ModelRouter router,RoutingPolicy policy,RouteTransactions transactions,ModelRouteRepository routes,ProviderCircuitBreaker breaker,List<ModelProvider> providers,SafeTelemetry telemetry) {
+        this.telemetry=telemetry;
         this.router=router;this.policy=policy;this.transactions=transactions;this.routes=routes;this.breaker=breaker;
         var indexed=new HashMap<String,ModelProvider>();for(var p:providers)if(indexed.put(p.id(),p)!=null)throw new IllegalArgumentException("Duplicate model provider");this.providers=Map.copyOf(indexed);
     }
@@ -27,6 +34,9 @@ public class ModelRoutingService {
         var ticket=transactions.reserve(activity,request,owner);
         if(ticket.code()!=null)throwCode(ticket.code());
         var descriptor=ticket.descriptor();ModelResponse response;
+        long started=System.nanoTime();
+        var labels=Map.of("provider",descriptor.provider(),"model",descriptor.model());
+        telemetry.count(Metric.MODEL_ATTEMPTS,labels);
         try {
             var provider=providers.get(descriptor.provider());if(provider==null)throw new ModelProviderException(ModelProviderException.Kind.INVALID_MODEL);
             var routed=new ModelRequest(request.requestVersion(),descriptor.provider(),descriptor.model(),request.systemInstructions(),request.userContent(),request.temperature(),request.maxOutputTokens(),request.structuredOutput());
@@ -35,10 +45,17 @@ public class ModelRoutingService {
                 throw new ModelProviderException(ModelProviderException.Kind.MALFORMED_RESPONSE);
         } catch(Exception failure) {
             var kind=failure instanceof ModelProviderException typed?typed.kind():ModelProviderException.Kind.UNCLASSIFIED;
+            telemetry.duration(Metric.MODEL_ATTEMPT_DURATION,System.nanoTime()-started,Map.of("provider",descriptor.provider(),"model",descriptor.model(),"status","FAILURE"));
+            telemetry.event("PROVIDER_ATTEMPT_FAILED",Map.of("logicalModelCallId",activity.toString(),"activityExecutionId",activity.toString(),"provider",descriptor.provider(),"model",descriptor.model(),"status","FAILURE"));
             boolean health=Set.of(ModelProviderException.Kind.UNAVAILABLE,ModelProviderException.Kind.RATE_LIMITED,ModelProviderException.Kind.TIMEOUT).contains(kind);
             if(health)breaker.healthFailure(descriptor.provider());else breaker.neutral(descriptor.provider());
             throwCode(transactions.failure(ticket,kind,health,owner));throw new IllegalStateException("Unreachable");
         }
+        telemetry.duration(Metric.MODEL_ATTEMPT_DURATION,System.nanoTime()-started,Map.of("provider",descriptor.provider(),"model",descriptor.model(),"status","SUCCESS"));
+        telemetry.sample(Metric.MODEL_INPUT_TOKENS,response.usage().inputTokens(),labels);
+        telemetry.sample(Metric.MODEL_OUTPUT_TOKENS,response.usage().outputTokens(),labels);
+        telemetry.sample(Metric.MODEL_COST_MICROS,(double)response.usage().inputTokens()*descriptor.inputCostMicros()+(double)response.usage().outputTokens()*descriptor.outputCostMicros(),labels);
+        telemetry.event("PROVIDER_ATTEMPT_COMPLETED",Map.of("logicalModelCallId",activity.toString(),"provider",descriptor.provider(),"model",descriptor.model(),"providerRequestId",Objects.toString(response.providerRequestId(),""),"status","SUCCESS"));
         breaker.success(descriptor.provider());transactions.success(ticket,response);
         var state=routes.find(activity).orElseThrow();var summary=routes.summary(activity).orElseThrow();
         var metadata=new LinkedHashMap<String,Object>();metadata.put("logicalModelCallId",activity.toString());metadata.put("primaryProvider",state.plan().primary().provider());metadata.put("primaryModel",state.plan().primary().model());

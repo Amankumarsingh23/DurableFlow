@@ -11,7 +11,12 @@ import java.util.*;
 public class WorkflowHistoryWriter {
     private final EntityManager entities;
     private final JdbcTemplate jdbc;
-    public WorkflowHistoryWriter(EntityManager entities, JdbcTemplate jdbc) { this.entities = entities; this.jdbc = jdbc; }
+    private final io.durableflow.observability.HistoryTelemetry telemetry;
+    public WorkflowHistoryWriter(EntityManager entities, JdbcTemplate jdbc) { this(entities,jdbc,null); }
+    @org.springframework.beans.factory.annotation.Autowired
+    public WorkflowHistoryWriter(EntityManager entities, JdbcTemplate jdbc, io.durableflow.observability.HistoryTelemetry telemetry) {
+        this.entities=entities;this.jdbc=jdbc;this.telemetry=telemetry;
+    }
 
     /** Always joins the transition transaction; never REQUIRES_NEW. Caller holds the run lock. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -23,5 +28,6 @@ public class WorkflowHistoryWriter {
         var now = Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class)).toInstant();
         entities.persist(new WorkflowEventEntity(run, activity, sequence, type, data, now));
         entities.flush(); // Failed event insertion aborts the associated transition immediately.
+        if(telemetry!=null)telemetry.committed(run,activity,type,data,now);
     }
 }

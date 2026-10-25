@@ -42,7 +42,7 @@ public class FakeRetriever implements Retriever {
         var dense=rank(authorized,request.query(),RetrievalStrategy.DENSE);
         var sparse=rank(authorized,request.query(),RetrievalStrategy.SPARSE);
         var selected=switch(request.strategy()) { case DENSE -> dense; case SPARSE -> sparse; case HYBRID -> fuse(dense,sparse); };
-        return new RetrievalResponse(id(),request.corpusVersion(),request.rankingVersion(),selected.stream().limit(request.topK()).toList());
+        return new RetrievalResponse(id(),request.corpusVersion(),request.rankingVersion(),selected.stream().limit(request.topK()).toList(),selected.size());
     }
     private List<RetrievedChunk> rank(List<RetrievedChunk> chunks,String query,RetrievalStrategy strategy) {
         var terms=new HashSet<>(tokens(query)); var queryVector=vector(query);

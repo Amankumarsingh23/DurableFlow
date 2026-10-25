@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 26 adds [best-effort observability and deterministic offline evaluation](docs/evaluation-observability.md):
+bounded Micrometer metrics, sanitized correlation logs, after-commit telemetry isolation, a compact agent
+summary, and twelve synthetic golden regression cases with JSON/Markdown report rendering. No schema
+migration, external judge, dashboard or collector is added. Run `mvn -B -Dtest=GoldenEvalIntegrationTest test`
+on a JDK 21/Maven/Docker machine; [runtime verification remains blocked](docs/session26-verification.md) in this workspace.
+
+
 Session 25 adds [durable model routing and fallback](docs/model-routing-fallback.md): trusted
 capability/cost/quality selection, frozen route plans, bounded queue-based retries/fallback,
 local circuit breakers and agent-budget checks before provider attempts. V13 adds route/attempt
