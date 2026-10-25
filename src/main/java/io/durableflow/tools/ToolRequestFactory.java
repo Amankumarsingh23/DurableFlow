@@ -9,6 +9,7 @@ import java.util.*;
 /** Shared schema/permission/policy/immutable persistence boundary. Caller holds the target run lock. */
 @Service
 public class ToolRequestFactory {
+    private final io.durableflow.security.ResourceLimits limits;
     private final ToolRequestRepository requests;
     private final ToolRegistry registry;
     private final ToolPermissionService permissions;
@@ -16,13 +17,19 @@ public class ToolRequestFactory {
     private final WorkflowHistoryWriter history;
     private final ToolPermissionService.Actor actor;
     public ToolRequestFactory(ToolRequestRepository requests,ToolRegistry registry,ToolPermissionService permissions,
+            ToolPolicyService policy,WorkflowHistoryWriter history,String actor,
+            String tenant) {this(requests,registry,permissions,policy,history,actor,tenant,io.durableflow.security.ResourceLimits.defaults());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public ToolRequestFactory(ToolRequestRepository requests,ToolRegistry registry,ToolPermissionService permissions,
             ToolPolicyService policy,WorkflowHistoryWriter history,@Value("${durableflow.tools.actor-id:demo-agent}") String actor,
-            @Value("${durableflow.tools.tenant-id:tenant-a}") String tenant) {
+            @Value("${durableflow.tools.tenant-id:tenant-a}") String tenant,io.durableflow.security.ResourceLimits limits) {
+        this.limits=limits;
         this.requests=requests;this.registry=registry;this.permissions=permissions;this.policy=policy;this.history=history;
         this.actor=new ToolPermissionService.Actor(actor,tenant);
     }
     @Transactional(propagation=Propagation.MANDATORY)
     public ToolRequest create(UUID runId,UUID sourceId,UUID proposalId,String executeNode,String approvalNode,String name,Map<String,Object> args) {
+        limits.checkJson(io.durableflow.security.ResourceLimits.Payload.TOOL_ARGUMENTS,args);
         var existing=requests.forRun(runId);
         if(existing.isPresent()) {
             var old=existing.get(); old.requireIdentity(name,args);

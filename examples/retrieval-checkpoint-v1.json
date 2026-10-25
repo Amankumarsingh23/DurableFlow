@@ -1,0 +1,11 @@
+{
+  "name": "RetrievalCheckpoint",
+  "version": 1,
+  "steps": [
+    {
+      "id": "retrieve",
+      "activity": "retrieveContext",
+      "dependsOn": []
+    }
+  ]
+}

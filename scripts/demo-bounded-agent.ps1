@@ -1,13 +1,18 @@
 param(
     [ValidateSet('refund','runaway')][string]$Scenario = 'refund',
     [switch]$ApproveRefund,
+    [Guid]$RetrievalActivityId,
     [string]$BaseUrl = 'http://localhost:8080/api'
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Invoke-RestMethod -Uri "$($BaseUrl -replace '/api$', '')/actuator/health" -TimeoutSec 2 | Out-Null
 $file = if ($Scenario -eq 'refund') { 'start-bounded-refund-agent.json' } else { 'start-runaway-agent.json' }
-$agent = Invoke-RestMethod -Method Post -Uri "$BaseUrl/agent-executions" -ContentType 'application/json' -Body (Get-Content -LiteralPath (Join-Path $repoRoot "examples/$file") -Raw)
+$body = Get-Content -LiteralPath (Join-Path $repoRoot "examples/$file") -Raw | ConvertFrom-Json
+if ($PSBoundParameters.ContainsKey('RetrievalActivityId')) {
+    $body | Add-Member -NotePropertyName retrievalActivityId -NotePropertyValue $RetrievalActivityId.ToString()
+}
+$agent = Invoke-RestMethod -Method Post -Uri "$BaseUrl/agent-executions" -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 12)
 $approved = $false
 # Bounded client-side orchestration pump. Providers run only in the separate durable worker.
 for ($transition = 0; $transition -lt 120; $transition++) {

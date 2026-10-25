@@ -1,0 +1,20 @@
+{
+  "workflowName": "RetrievalCheckpoint",
+  "version": 1,
+  "input": {
+    "retrievalRequest": {
+      "requestVersion": 1,
+      "retriever": "fake",
+      "corpusVersion": "policies-v1",
+      "rankingVersion": "local-v1",
+      "query": "refund POL-RFD-042 reviewer approval",
+      "strategy": "HYBRID",
+      "topK": 2,
+      "maxContextChars": 3000,
+      "filters": {
+        "tenantId": "tenant-a",
+        "documentType": "policy"
+      }
+    }
+  }
+}

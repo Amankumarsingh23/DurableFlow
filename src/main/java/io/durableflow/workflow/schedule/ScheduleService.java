@@ -10,14 +10,19 @@ import java.util.*;
 
 @Service
 public class ScheduleService {
+    private final io.durableflow.security.ResourceLimits limits;
     private final ScheduleRepository schedules;
     private final WorkflowDefinitionRepository definitions;
     private final Validator validator;
-    public ScheduleService(ScheduleRepository schedules, WorkflowDefinitionRepository definitions, Validator validator) {
+    public ScheduleService(ScheduleRepository schedules, WorkflowDefinitionRepository definitions, Validator validator) {this(schedules,definitions,validator,io.durableflow.security.ResourceLimits.defaults());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public ScheduleService(ScheduleRepository schedules, WorkflowDefinitionRepository definitions, Validator validator, io.durableflow.security.ResourceLimits limits) {
+        this.limits=limits;
         this.schedules = schedules; this.definitions = definitions; this.validator = validator;
     }
     @Transactional
     public WorkflowSchedule create(CreateScheduleRequest request) {
+        if(request!=null)limits.checkJson(io.durableflow.security.ResourceLimits.Payload.SCHEDULE_INPUT,request.input());
         if (request == null || !validator.validate(request).isEmpty()
                 || (request.type() == ScheduleType.START_AT && request.intervalMillis() != null)
                 || (request.type() == ScheduleType.FIXED_INTERVAL && (request.intervalMillis() == null

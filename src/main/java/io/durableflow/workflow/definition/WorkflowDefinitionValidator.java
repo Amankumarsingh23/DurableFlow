@@ -9,9 +9,16 @@ import java.util.*;
 @Component
 public class WorkflowDefinitionValidator {
     private final Validator validator;
+    private final io.durableflow.security.ResourceLimits limits;
 
-    public WorkflowDefinitionValidator(Validator validator) { this.validator = validator; }
+    public WorkflowDefinitionValidator(Validator validator) {this(validator,io.durableflow.security.ResourceLimits.defaults());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public WorkflowDefinitionValidator(Validator validator,io.durableflow.security.ResourceLimits limits) {this.validator=validator;this.limits=limits;}
 
+    /** Registration-only limits do not retroactively invalidate already persisted definitions on recovery. */
+    public RegisterWorkflowDefinitionRequest normalizeNewDefinition(RegisterWorkflowDefinitionRequest request) {
+        limits.definition(request);return normalizeAndValidate(request);
+    }
     public RegisterWorkflowDefinitionRequest normalizeAndValidate(RegisterWorkflowDefinitionRequest request) {
         if (request == null || !validator.validate(request).isEmpty()) {
             throw invalid("Name, positive version and nonempty valid steps are required");

@@ -20,7 +20,7 @@ public class WorkflowDefinitionService {
 
     @Transactional
     public WorkflowDefinitionResponse register(RegisterWorkflowDefinitionRequest request) {
-        var normalized = validator.normalizeAndValidate(request);
+        var normalized = validator.normalizeNewDefinition(request);
         if (definitions.findByNameAndVersion(normalized.name(), normalized.version()).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "Workflow name/version already registered");
         }

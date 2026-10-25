@@ -19,6 +19,7 @@ import java.util.UUID;
 
 @Service
 public class WorkflowRunService {
+    private final io.durableflow.security.ResourceLimits limits;
     private final WorkflowDefinitionService definitions;
     private final WorkflowDefinitionRepository definitionRepository;
     private final WorkflowRunRepository runs;
@@ -36,7 +37,14 @@ public class WorkflowRunService {
                               WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
                               WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals,
                               CompensationExecutionRepository compensations, ChildSettings childSettings,
-                              ChildWorkflowRepository children) {
+                              ChildWorkflowRepository children) {this(definitions,definitionRepository,runs,activities,validator,clock,history,timers,signals,compensations,childSettings,children,io.durableflow.security.ResourceLimits.defaults());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public WorkflowRunService(WorkflowDefinitionService definitions, WorkflowDefinitionRepository definitionRepository,
+                              WorkflowRunRepository runs, ActivityExecutionRepository activities, Validator validator, Clock clock,
+                              WorkflowHistoryWriter history, WorkflowTimerRepository timers, SignalRepository signals,
+                              CompensationExecutionRepository compensations, ChildSettings childSettings,
+                              ChildWorkflowRepository children, io.durableflow.security.ResourceLimits limits) {
+        this.limits=limits;
         this.definitions = definitions;
         this.definitionRepository = definitionRepository;
         this.runs = runs;
@@ -55,6 +63,7 @@ public class WorkflowRunService {
 
     @Transactional
     public WorkflowRunResponse startAtDepth(StartWorkflowRunRequest request, int depth) {
+        if(request!=null)limits.checkJson(io.durableflow.security.ResourceLimits.Payload.WORKFLOW_INPUT,request.input());
         if (depth < 0 || depth > childSettings.maxDepth()) {
             throw new ApiException(HttpStatus.CONFLICT, "Maximum child workflow depth exceeded");
         }

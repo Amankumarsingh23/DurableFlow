@@ -13,6 +13,7 @@ import java.util.*;
 
 @Service
 public class SignalReceiver {
+    private final io.durableflow.security.ResourceLimits limits;
     private final WorkflowRunRepository runs;
     private final WorkflowDefinitionRepository definitions;
     private final SignalRepository signals;
@@ -21,13 +22,18 @@ public class SignalReceiver {
     private final Validator validator;
     private final List<SignalAcceptanceGuard> guards;
     public SignalReceiver(WorkflowRunRepository runs, WorkflowDefinitionRepository definitions, SignalRepository signals,
-                          WorkflowTaskOrchestrator orchestrator, WorkflowHistoryWriter history, Validator validator, List<SignalAcceptanceGuard> guards) {
+                          WorkflowTaskOrchestrator orchestrator, WorkflowHistoryWriter history, Validator validator, List<SignalAcceptanceGuard> guards) {this(runs,definitions,signals,orchestrator,history,validator,guards,io.durableflow.security.ResourceLimits.defaults());}
+    @org.springframework.beans.factory.annotation.Autowired
+    public SignalReceiver(WorkflowRunRepository runs, WorkflowDefinitionRepository definitions, SignalRepository signals,
+                          WorkflowTaskOrchestrator orchestrator, WorkflowHistoryWriter history, Validator validator, List<SignalAcceptanceGuard> guards, io.durableflow.security.ResourceLimits limits) {
+        this.limits=limits;
         this.runs = runs; this.definitions = definitions; this.signals = signals;
         this.orchestrator = orchestrator; this.history = history; this.validator = validator; this.guards = List.copyOf(guards);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public SignalReceipt receive(UUID runId, ReceiveSignalRequest request) {
+        if(request!=null)limits.checkJson(io.durableflow.security.ResourceLimits.Payload.SIGNAL,request.payload());
         if (request == null || !validator.validate(request).isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Nonblank signalId, signalNodeId and payload object are required");
         }
