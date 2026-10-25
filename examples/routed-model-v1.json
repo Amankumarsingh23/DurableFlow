@@ -1,0 +1,11 @@
+{
+  "name": "RoutedModelDemo",
+  "version": 1,
+  "steps": [
+    {
+      "id": "model",
+      "activity": "modelCall",
+      "dependsOn": []
+    }
+  ]
+}

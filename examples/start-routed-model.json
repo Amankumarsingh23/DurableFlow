@@ -1,0 +1,16 @@
+{
+  "workflowName": "RoutedModelDemo",
+  "version": 1,
+  "input": {
+    "modelRequest": {
+      "requestVersion": 1,
+      "provider": "routed",
+      "model": "recommendation-v1",
+      "systemInstructions": "Give a bounded structured recommendation.",
+      "userContent": "Review order O-42.",
+      "temperature": 0.0,
+      "maxOutputTokens": 128,
+      "structuredOutput": true
+    }
+  }
+}

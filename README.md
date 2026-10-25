@@ -1,5 +1,11 @@
 # DurableFlow
 
+Session 25 adds [durable model routing and fallback](docs/model-routing-fallback.md): trusted
+capability/cost/quality selection, frozen route plans, bounded queue-based retries/fallback,
+local circuit breakers and agent-budget checks before provider attempts. V13 adds route/attempt
+metadata; V1-V12 remain unchanged. Fake providers and demos require no network or SDK.
+Runtime verification remains blocked by missing Java/Maven/Docker and demo execution policy.
+
 Session 24 adds a [bounded durable agent loop](docs/bounded-agent-loop.md): persisted iterations,
 strict model decisions, Session 23 tool requests/approval, deterministic context and durable
 iteration/model/tool/token/cost limits. Fixed work templates use the existing worker; no

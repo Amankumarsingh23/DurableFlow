@@ -16,8 +16,9 @@ public record ClaimedTask(UUID taskId, UUID runId, UUID activityExecutionId, Str
     public boolean isCompensation() { return compensationExecutionId != null; }
     @SuppressWarnings("unchecked")
     public ActivityExecutionContext context() {
-        return isCompensation() ? new ActivityExecutionContext(runId, activityExecutionId, true,
+        var context = isCompensation() ? new ActivityExecutionContext(runId, activityExecutionId, true,
                 (Map<String, Object>) input.get("originalInput"), (Map<String, Object>) input.get("originalOutput"))
                 : new ActivityExecutionContext(runId, activityExecutionId);
+        return context.withOwnership(new ActivityExecutionContext.TaskOwnership(taskId,workerId,leaseGeneration));
     }
 }

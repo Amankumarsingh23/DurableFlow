@@ -14,7 +14,7 @@ public class AgentContextBuilder {
         while(facts.size()>4)facts.removeFirst();
         String text;
         while(true) {
-            text=ToolJson.encode(ToolJson.freeze(Map.of("contextVersion",1,"iteration",a.currentIteration()+1,"data",Map.of("trust","UNTRUSTED_DATA","goal",a.goal(),"retrieval",a.frozenContext(),"priorFacts",facts))));
+            text=ToolJson.encode(ToolJson.freeze(Map.of("semanticModel","fake-agent-"+a.scenario()+"-v1","contextVersion",1,"iteration",a.currentIteration()+1,"data",Map.of("trust","UNTRUSTED_DATA","goal",a.goal(),"retrieval",a.frozenContext(),"priorFacts",facts))));
             if(text.length()+SYSTEM.length()<=a.limits().maxContextChars())break;
             if(facts.isEmpty())throw new IllegalArgumentException("AGENT_CONTEXT_LIMIT");
             facts.removeFirst(); // Whole oldest facts only, never truncate evidence/identities mid-string.

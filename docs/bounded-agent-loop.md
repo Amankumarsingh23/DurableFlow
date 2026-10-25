@@ -1,5 +1,7 @@
 # Session 24: bounded durable agent loop
 
+Session 25 extends model execution with [durable routing/fallback and route-aware accounting](model-routing-fallback.md). This document records the Session 24 baseline.
+
 A model decision is a checkpoint, not an imperative to run another tool. AgentLoopService
 advances one orchestration transition per transaction. It never invokes a model or tool provider.
 The existing task workers execute those steps. There is no in-memory while(true), arbitrary

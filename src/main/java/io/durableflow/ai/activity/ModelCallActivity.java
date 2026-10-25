@@ -13,13 +13,14 @@ public class ModelCallActivity implements ActivityHandler {
     public Map<String, Object> execute(ActivityExecutionContext context, Map<String, Object> input) throws Exception {
         if (input.get("grounding") != null && (!(input.get("groundingPreparation") instanceof Map<?,?> preparation)
                 || !"PREPARED".equals(preparation.get("status")))) throw new IllegalArgumentException("MODEL_INVALID_GROUNDING");
-        var response = gateway.call(ModelRequest.fromInput(input), context.idempotencyKey());
+        var response = gateway.call(ModelRequest.fromInput(input), context.idempotencyKey(),context);
         var output = new LinkedHashMap<String, Object>();
         output.put("outputVersion", 1); output.put("provider", response.provider()); output.put("model", response.model());
         if (response.content() != null) output.put("content", response.content());
         if (response.structuredJson() != null) output.put("structuredJson", response.structuredJson());
         output.put("usage", Map.of("inputTokens", response.usage().inputTokens(), "outputTokens", response.usage().outputTokens()));
         output.put("latencyMillis", response.latencyMillis());
+        if(!response.routing().isEmpty()) {output.put("routing",response.routing());output.put("estimatedCostMicros",response.routing().get("knownCostMicros"));}
         if (response.providerRequestId() != null) output.put("providerRequestId", response.providerRequestId());
         if (input.get("grounding") != null) output.put("grounding",input.get("groundingPreparation"));
         return output;

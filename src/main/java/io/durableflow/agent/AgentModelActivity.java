@@ -21,7 +21,7 @@ public class AgentModelActivity implements ActivityHandler {
                 || activities.findById(context.activityExecutionId()).orElseThrow().getAttemptCount()>agent.maxModelAttempts())
             throw new IllegalArgumentException("AGENT_MODEL_ATTEMPT_LIMIT");
         var raw=model.execute(context,input);var safe=new LinkedHashMap<String,Object>();
-        for(String key:List.of("outputVersion","provider","model","usage","latencyMillis","providerRequestId"))if(raw.containsKey(key))safe.put(key,raw.get(key));
+        for(String key:List.of("outputVersion","provider","model","usage","latencyMillis","providerRequestId","routing","estimatedCostMicros"))if(raw.containsKey(key))safe.put(key,raw.get(key));
         try {
             var decision=AgentDecision.parse(raw.get("structuredJson"));
             if(decision.type()==AgentDecision.Type.TOOL_CALL) {

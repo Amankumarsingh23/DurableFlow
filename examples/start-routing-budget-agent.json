@@ -1,0 +1,13 @@
+{
+  "goal": "Return a final answer.",
+  "scenario": "final",
+  "limits": {
+    "maxIterations": 8,
+    "maxLogicalModelCalls": 8,
+    "maxLogicalToolCalls": 6,
+    "maxTotalTokens": 500000,
+    "maxEstimatedCostMicros": 3000,
+    "maxContextChars": 12000,
+    "maxOutputTokens": 128
+  }
+}

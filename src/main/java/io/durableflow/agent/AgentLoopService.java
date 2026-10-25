@@ -1,6 +1,7 @@
 package io.durableflow.agent;
 
 import io.durableflow.ai.model.ModelRequest;
+import io.durableflow.ai.routing.*;
 import io.durableflow.tools.*;
 import io.durableflow.workflow.activity.*;
 import io.durableflow.workflow.run.*;
@@ -27,11 +28,13 @@ public class AgentLoopService {
     private final AgentContextBuilder contexts;
     private final WorkflowHistoryWriter history;
     private final SignalRepository signals;
+    private final ModelRoutingService routing;
+    private final ModelRouteRepository routes;
     public AgentLoopService(AgentRepository agents,WorkflowRunRepository runs,WorkflowRunService runService,ActivityExecutionRepository activities,
             WorkflowTaskOrchestrator orchestrator,ToolRegistry registry,ToolRequestFactory factory,ToolRequestRepository requests,
-            AgentContextBuilder contexts,WorkflowHistoryWriter history,SignalRepository signals) {
+            AgentContextBuilder contexts,WorkflowHistoryWriter history,SignalRepository signals,ModelRoutingService routing,ModelRouteRepository routes) {
         this.agents=agents;this.runs=runs;this.runService=runService;this.activities=activities;this.orchestrator=orchestrator;
-        this.registry=registry;this.factory=factory;this.requests=requests;this.contexts=contexts;this.history=history;this.signals=signals;
+        this.registry=registry;this.factory=factory;this.requests=requests;this.contexts=contexts;this.history=history;this.signals=signals;this.routing=routing;this.routes=routes;
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW,isolation=Isolation.READ_COMMITTED)
     public AgentExecution advance(UUID id) {
@@ -59,15 +62,26 @@ public class AgentLoopService {
         long tokens=contexts.reservedTokens(request,a.maxModelAttempts()),cost=contexts.reservedCost(request,a.maxModelAttempts());
         if(tokens>a.limits().maxTotalTokens()-a.reservedTokens()) {limit(a,"MAX_TOTAL_TOKENS");return;}
         if(cost>a.limits().maxEstimatedCostMicros()-a.reservedCostMicros()) {limit(a,"MAX_ESTIMATED_COST");return;}
+        RouteDecision plan;
+        try {plan=routing.plan(request,true,a.limits().maxTotalTokens()-a.reservedTokens(),a.limits().maxEstimatedCostMicros()-a.reservedCostMicros(),a.maxModelAttempts());}
+        catch(IllegalArgumentException noRoute) {finish(a,AgentExecution.Status.FAILED,"MODEL_NO_ELIGIBLE_ROUTE",Map.of());return;}
+        cost=Math.multiplyExact(plan.primary().estimatedCost(request.systemInstructions().length()+request.userContent().length(),request.maxOutputTokens()),a.maxModelAttempts());
+        if(cost>a.limits().maxEstimatedCostMicros()-a.reservedCostMicros()) {limit(a,"MAX_ESTIMATED_COST");return;}
         var run=runService.start(new StartWorkflowRunRequest(AgentWorkflows.MODEL,1,contexts.input(request)));
         var activity=activities.findByWorkflowRunIdOrderByActivityIdAsc(run.runId()).getFirst();
         agents.startIteration(a,UUID.randomUUID(),run.runId(),activity.getId(),tokens,cost);
+        routing.prepare(activity.getId(),a.id(),request,plan);
         orchestrator.advanceInTransaction(run.runId());
     }
     private void checkpointModel(AgentExecution a,AgentIteration i) {
         var activity=activities.findById(i.modelActivityId()).orElseThrow();
         if(activity.getStatus()==ActivityExecutionStatus.FAILED) {
-            agents.decision(i,null,activity.getAttemptCount(),0,0,0);finish(a,AgentExecution.Status.FAILED,"MODEL_ACTIVITY_FAILED",Map.of());return;
+            var summary=routes.summary(i.modelActivityId());
+            int attempts=summary.filter(x -> x.attempts()>0 || x.terminalCode()!=null).map(ModelRouteRepository.Summary::attempts).orElse(activity.getAttemptCount());
+            agents.decision(i,null,attempts,summary.map(ModelRouteRepository.Summary::inputTokens).orElse(0L),summary.map(ModelRouteRepository.Summary::outputTokens).orElse(0L),summary.map(ModelRouteRepository.Summary::knownCostMicros).orElse(0L));
+            String code=summary.map(ModelRouteRepository.Summary::terminalCode).orElse("MODEL_ACTIVITY_FAILED");
+            if(Set.of("MAX_ESTIMATED_COST","MAX_TOTAL_TOKENS").contains(code))limit(a,code);
+            else finish(a,AgentExecution.Status.FAILED,code,Map.of());return;
         }
         if(activity.getStatus()!=ActivityExecutionStatus.COMPLETED)return;
         var output=activity.getOutputJson();long input,generated,cost;
@@ -78,8 +92,11 @@ public class AgentLoopService {
         AgentDecision decision=null;
         try {if(Boolean.TRUE.equals(output.get("decisionSchemaValid")))decision=AgentDecision.parse(output.get("structuredJson"));}
         catch(IllegalArgumentException invalid) { /* Persist usage, but never invalid/private model content. */ }
-        agents.decision(i,decision,activity.getAttemptCount(),input,generated,cost);
-        if(input+generated>i.reservedTokens() || cost>i.reservedCostMicros()) {limit(a,"USAGE_RESERVATION_EXCEEDED");return;}
+        var observed=routes.summary(i.modelActivityId()).filter(x -> x.attempts()>0);
+        if(observed.isPresent()) {input=observed.get().inputTokens();generated=observed.get().outputTokens();cost=observed.get().knownCostMicros();}
+        agents.decision(i,decision,observed.map(ModelRouteRepository.Summary::attempts).orElse(activity.getAttemptCount()),input,generated,cost);
+        long extra=observed.map(ModelRouteRepository.Summary::extraReservedCost).orElse(0L);
+        if(input+generated>i.reservedTokens() || cost>i.reservedCostMicros()+extra) {limit(a,"USAGE_RESERVATION_EXCEEDED");return;}
         if(decision==null)finish(a,AgentExecution.Status.FAILED,"INVALID_MODEL_DECISION",Map.of());
     }
     private void decide(AgentExecution a,AgentIteration i,List<AgentIteration> all) {

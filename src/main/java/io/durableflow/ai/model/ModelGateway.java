@@ -8,7 +8,11 @@ import java.util.*;
 @Service
 public class ModelGateway {
     private final Map<String, ModelProvider> providers;
-    public ModelGateway(List<ModelProvider> providers) {
+    private final io.durableflow.ai.routing.ModelRoutingService routing;
+    public ModelGateway(List<ModelProvider> providers) {this(providers,null);}
+    @org.springframework.beans.factory.annotation.Autowired
+    public ModelGateway(List<ModelProvider> providers,io.durableflow.ai.routing.ModelRoutingService routing) {
+        this.routing=routing;
         var indexed = new HashMap<String, ModelProvider>();
         for (var provider : providers) {
             if (provider.id() == null || provider.id().isBlank() || indexed.putIfAbsent(provider.id(), provider) != null) {
@@ -17,9 +21,15 @@ public class ModelGateway {
         }
         this.providers = Map.copyOf(indexed);
     }
-    public ModelResponse call(ModelRequest request, String operationKey) throws Exception {
+    public ModelResponse call(ModelRequest request,String operationKey) throws Exception {return call(request,operationKey,null);}
+    public ModelResponse call(ModelRequest request, String operationKey,io.durableflow.workflow.activity.ActivityExecutionContext context) throws Exception {
         Objects.requireNonNull(request);
         if (operationKey == null || operationKey.isBlank()) throw new IllegalArgumentException("Model operation key required");
+        if (request.provider().equals("routed") || routing!=null && request.provider().equals("fake") && request.model().startsWith("fake-agent-")) {
+            if(routing==null)throw new IllegalArgumentException("MODEL_ROUTING_NOT_CONFIGURED");
+            return routing.call(request,operationKey,context==null?null:context.ownership());
+        }
+        if(Set.of("fake-a","fake-b").contains(request.provider()))throw new IllegalArgumentException("MODEL_ROUTED_PROVIDER_REQUIRES_ROUTER");
         var provider = providers.get(request.provider());
         if (provider == null) throw new IllegalArgumentException("MODEL_INVALID_PROVIDER_CONFIGURATION");
         try {

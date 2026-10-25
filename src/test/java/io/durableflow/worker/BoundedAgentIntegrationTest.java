@@ -45,7 +45,7 @@ class BoundedAgentIntegrationTest {
     @Autowired WorkflowDefinitionService definitions;
     @Autowired WorkflowRunService runs;
     @Autowired JdbcTemplate jdbc;
-    @BeforeEach void clean() {jdbc.execute("TRUNCATE agent_iteration, agent_execution, fake_tool_effect, tool_request, workflow_schedule_occurrence, workflow_schedule, child_workflow_execution, compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");}
+    @BeforeEach void clean() {jdbc.execute("TRUNCATE model_route_attempt, model_route, agent_iteration, agent_execution, fake_tool_effect, tool_request, workflow_schedule_occurrence, workflow_schedule, child_workflow_execution, compensation_execution, workflow_signal_delivery, workflow_signal_wait, workflow_timer, workflow_event, activity_task, activity_execution, workflow_run, workflow_definition");}
     @Test void concurrentAdvanceCreatesFirstIterationAndLogicalModelCallOnce() throws Exception {
         var a=create("runaway",AgentLimits.defaults());concurrentAdvance(a.id());
         assertThat(agents.iterations(a.id())).hasSize(1);assertThat(agents.get(a.id()).logicalModelCalls()).isEqualTo(1);
