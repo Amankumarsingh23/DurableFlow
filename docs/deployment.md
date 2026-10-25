@@ -26,7 +26,7 @@ $env:WORKER_ID='worker-local-1'
 java -jar target/durableflow-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker
 ```
 
-Package/startup has not run here. For local convenience use `docker compose up -d --wait postgres`; the Compose file binds PostgreSQL to loopback and is not an HA/production manifest. Existing local fallback credentials must be replaced. Do not enable the dev profile on a public service. Add the ingress/authorization controls in [security-resource-limits.md](security-resource-limits.md).
+Executable packaging now passes; application startup/migrations remain unverified. See [current verification evidence](runtime-verification-progress.md). For local convenience use `docker compose up -d --wait postgres`; the Compose file binds PostgreSQL to loopback and is not an HA/production manifest. Existing local fallback credentials must be replaced. Do not enable the dev profile on a public service. Add the ingress/authorization controls in [security-resource-limits.md](security-resource-limits.md).
 
 ## Pollers, recovery and shutdown
 

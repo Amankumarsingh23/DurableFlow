@@ -1,0 +1,220 @@
+{
+  "verification": "unit-tests-only",
+  "date": "2026-10-26",
+  "baselineCommit": "e68e8aa",
+  "testedFix": "Explicitly close SimpleMeterRegistry in AiTelemetryTest and TelemetryBoundaryTest; its API is not AutoCloseable.",
+  "java": "Microsoft OpenJDK 21.0.13.0.2",
+  "maven": "3.9.16",
+  "command": "mvn -B -ntp '-Dtest=*Test,!*IntegrationTest' test",
+  "totals": {
+    "tests": 141,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "io.durableflow.agent.AgentContractsTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.43"
+    },
+    {
+      "name": "io.durableflow.agent.AgentModelActivityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.164"
+    },
+    {
+      "name": "io.durableflow.ai.ModelGatewayTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.106"
+    },
+    {
+      "name": "io.durableflow.ai.RetrievalTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.111"
+    },
+    {
+      "name": "io.durableflow.ai.routing.ModelRouterTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.067"
+    },
+    {
+      "name": "io.durableflow.ai.routing.ProviderCircuitBreakerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.011"
+    },
+    {
+      "name": "io.durableflow.evaluation.EvalRunnerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.164"
+    },
+    {
+      "name": "io.durableflow.observability.AiTelemetryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.115"
+    },
+    {
+      "name": "io.durableflow.observability.TelemetryBoundaryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.114"
+    },
+    {
+      "name": "io.durableflow.security.BoundedRequestFilterTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.042"
+    },
+    {
+      "name": "io.durableflow.security.ResourceLimitsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.393"
+    },
+    {
+      "name": "io.durableflow.tools.ToolContractsTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.024"
+    },
+    {
+      "name": "io.durableflow.worker.HandlerExecutionsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.254"
+    },
+    {
+      "name": "io.durableflow.worker.retry.RetryPolicyTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.007"
+    },
+    {
+      "name": "io.durableflow.worker.WorkerHeartbeatsTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.188"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.ActivityLifecycleTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.07"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.ActivityRegistryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.015"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.PaymentIdempotencyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.015"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.SagaIdempotencyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.019"
+    },
+    {
+      "name": "io.durableflow.workflow.definition.WorkflowDefinitionValidatorTest",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.151"
+    },
+    {
+      "name": "io.durableflow.workflow.definition.WorkflowGraphTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.006"
+    },
+    {
+      "name": "io.durableflow.workflow.task.ActivityTaskLifecycleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.004"
+    },
+    {
+      "name": "io.durableflow.workflow.timer.TimerPollingConfigurationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.043"
+    }
+  ],
+  "limitations": [
+    "PostgreSQL-backed integration tests excluded",
+    "No application startup, migration, demo, chaos or benchmark result is implied",
+    "Portable tools outside repository; Windows-ROOT trust store used without disabling TLS validation"
+  ],
+  "packaging": {
+    "command": "mvn -B -ntp -DskipTests package",
+    "result": "PASS",
+    "testsExecutedByThisCommand": false,
+    "artifactSha256": "0330802c620d3ccbdaa40dba46e07a0c4067696c72e686f8f407ba17af97095c"
+  },
+  "postgresProbe": {
+    "command": "mvn -B -ntp -Dtest=PersistenceIntegrationTest test",
+    "result": "BLOCKED",
+    "reportedTests": 1,
+    "reportedErrors": 1,
+    "reason": "Could not find a valid Docker environment",
+    "databaseAssertionsExecuted": false
+  }
+}

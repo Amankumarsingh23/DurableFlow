@@ -1,4 +1,6 @@
-# DurableFlow project status after Session 27
+# DurableFlow project status - runtime verification started
+
+Current evidence: [runtime verification board](runtime-verification-progress.md). Main/test compilation, packaging and 141 unit tests pass; Docker-backed checks remain pending.
 
 Implementation status is separate from execution evidence. Major feature sessions end here; next work is runtime verification, defect correction, evidence collection and presentation polish. This repository is not claimed production-ready.
 
@@ -26,11 +28,15 @@ Checks executed on 2026-10-26 in the Windows workspace:
 
 ## RUNTIME VERIFIED
 
-**No Java compilation, migrations, application startup, unit/integration/chaos/evaluation test results, demos or benchmark measurements are verified in this environment.** Static parsers and Git checks are the only executed verification here. No benchmark/latency/capacity numbers or passing reports were invented.
+Main compilation (210 source files), test compilation (49 source files), executable JAR packaging and the complete non-integration unit selection are now verified under Microsoft OpenJDK 21.0.13.0.2 / Maven 3.9.16. Unit result: **141 tests, zero failures/errors/skips**. Three initial test compilation errors were fixed without weakening assertions. See the [sanitized unit evidence](verification/unit-results-2026-10-26.json).
+
+Migrations, application startup, PostgreSQL integration/chaos/evaluation, demos and benchmarks remain unverified. No full-suite/production/capacity claim is implied.
 
 ## NOT YET VERIFIED
 
-| Attempt / category | Current result |
+The following table records the initial Session 27 setup attempts, **before** portable Java/Maven setup. The current verification board above supersedes the old missing-Java/Maven blockers; Docker/WSL and script policy remain unresolved.
+
+| Initial attempt / category | Initial result |
 | --- | --- |
 | java -version, mvn -version, docker version | Commands not found on PATH |
 | mvn -B -DskipTests compile, mvn -B test | Maven unavailable; neither compilation nor tests ran |

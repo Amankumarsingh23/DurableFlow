@@ -2,7 +2,7 @@
 
 A Java/Spring Boot/PostgreSQL workflow and AI agent runtime built to study durable execution. It persists orchestration state, queues work transactionally, and separates short claim/completion transactions from external work. Leases, generation fencing, stable idempotency identities and checkpoints support recovery; the AI layer adds scoped retrieval, constrained model routing, policy-gated tools, human approval and durable budgets.
 
-**Status:** implementation and static checks only. Compilation, runtime regression/chaos tests, demos and performance measurements remain unverified in this workspace because Java/Maven/Docker are unavailable. No production readiness, universal exactly-once or throughput claim is made. See [project status](docs/project-status.md) and the [runtime verification checklist](docs/runtime-verification-checklist.md).
+**Verification in progress:** main/test compilation, executable packaging and **141 unit tests** now pass under Java 21. PostgreSQL integration, migrations, application startup, demos, chaos and benchmarks still await Docker/WSL repair. No production readiness, universal exactly-once or throughput claim is made. See the [verification board](docs/runtime-verification-progress.md), [project status](docs/project-status.md) and [runtime checklist](docs/runtime-verification-checklist.md).
 
 ```mermaid
 flowchart LR

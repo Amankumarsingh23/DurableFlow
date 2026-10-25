@@ -9,7 +9,8 @@ import static org.assertj.core.api.Assertions.*;
 
 class TelemetryBoundaryTest {
     @Test void arbitraryRunIdsAndUnknownNamesCannotGrowMeterCardinality() {
-        try(var registry=new SimpleMeterRegistry()) {
+        var registry=new SimpleMeterRegistry();
+        try {
             var dispatcher=new TelemetryDispatcher();
             try {
                 var adapter=new MicrometerTelemetry(registry,dispatcher);
@@ -19,7 +20,7 @@ class TelemetryBoundaryTest {
                 assertThat(registry.find("durableflow.model.attempts").counter().getId().getTags()).allMatch(tag -> Set.of("provider","model").contains(tag.getKey()) && tag.getValue().equals("other"));
                 assertThat(registry.find("durableflow.model.attempts").counter().count()).isEqualTo(1000);
             } finally {dispatcher.close();}
-        }
+        } finally {registry.close();}
     }
     @Test void sanitizerDropsContentNestedArgumentsSecretsAndUntrustedClassifications() {
         String id=UUID.randomUUID().toString();var dirty=new LinkedHashMap<String,Object>();

@@ -13,7 +13,8 @@ class AiTelemetryTest {
     private void flush(SafeTelemetry telemetry) throws Exception {var done=new CountDownLatch(1);telemetry.deferred(done::countDown);assertThat(done.await(5,TimeUnit.SECONDS)).isTrue();}
     @Test void retrievalMeasuresScopedCandidatesSelectionContextAndFailuresWithoutRawText() throws Exception {
         var dispatcher=new TelemetryDispatcher();
-        try(var registry=new SimpleMeterRegistry()) {
+        var registry=new SimpleMeterRegistry();
+        try {
             var safe=new SafeTelemetry(dispatcher,new MicrometerTelemetry(registry,dispatcher));
             var input=Map.<String,Object>of("retrievalRequest",Map.of("requestVersion",1,"retriever","fake","corpusVersion","policies-v1","rankingVersion","local-v1","query","ACCT-1042","strategy","SPARSE","topK",1,"maxContextChars",3000,"filters",Map.of("tenantId","tenant-a","documentType","note")));
             var context=new ActivityExecutionContext(UUID.randomUUID(),UUID.randomUUID());
@@ -27,11 +28,12 @@ class AiTelemetryTest {
             assertThat(registry.find("durableflow.retrieval.candidates").summary().totalAmount()).isEqualTo(1);
             assertThat(registry.find("durableflow.retrieval.budget.utilization").summary().max()).isBetween(0.0,1.0);
             assertThat(registry.getMeters()).allMatch(m -> m.getId().getTags().stream().allMatch(t -> Set.of("strategy","status").contains(t.getKey())));
-        } finally {dispatcher.close();}
+        } finally {dispatcher.close();registry.close();}
     }
     @Test void providerAttemptsHaveUsageCostLatencyAndSeparateSuccessFailure() throws Exception {
         var dispatcher=new TelemetryDispatcher();
-        try(var registry=new SimpleMeterRegistry()) {
+        var registry=new SimpleMeterRegistry();
+        try {
             var safe=new SafeTelemetry(dispatcher,new MicrometerTelemetry(registry,dispatcher));
             var provider=new FakeModelProvider(List.of(FakeModelProvider.Outcome.UNAVAILABLE,FakeModelProvider.Outcome.SUCCESS));
             var gateway=new ModelGateway(List.of(provider),null,safe);var request=new ModelRequest(1,"fake","fake-recommendation-v1","Synthetic system","Synthetic user",0.0,128,true);
@@ -42,6 +44,6 @@ class AiTelemetryTest {
             assertThat(registry.find("durableflow.model.attempt.duration").tags("status","SUCCESS").timer().count()).isEqualTo(1);
             assertThat(registry.find("durableflow.model.input.tokens").summary().totalAmount()).isEqualTo(result.usage().inputTokens());
             assertThat(registry.find("durableflow.model.cost.micros").summary().totalAmount()).isEqualTo(result.usage().inputTokens()+2.0*result.usage().outputTokens());
-        } finally {dispatcher.close();}
+        } finally {dispatcher.close();registry.close();}
     }
 }

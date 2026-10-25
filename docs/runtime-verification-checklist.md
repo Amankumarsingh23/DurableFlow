@@ -1,6 +1,6 @@
 # Runtime verification checklist - required before resume performance claims
 
-No unchecked item below is a successful result. Current environment cannot run Java/Maven/Docker. Record date, commit, versions, commands, hardware/workload, exit codes and raw evidence. Stop and fix failures before collecting benchmark claims. Use disposable local databases; never truncate production data.
+No unchecked item below is a successful result. Portable Java/Maven now support compilation, packaging and 141 passing unit tests; Docker-backed verification is still blocked. See [current progress and shell setup](runtime-verification-progress.md). Record date, commit, versions, commands, hardware/workload, exit codes and raw evidence. Stop and fix failures before collecting benchmark claims. Use disposable local databases; never truncate production data.
 
 1. **Java:** `java -version`. Require a working JDK 21 toolchain; fix PATH/JAVA_HOME before continuing. An absent command or wrong major is a blocker, not a test failure.
 2. **Maven:** `mvn -version`. No wrapper is committed; install/configure Maven rather than invoking a nonexistent mvnw. Confirm the JVM Maven uses. Resolve artifact/version/network failures honestly.

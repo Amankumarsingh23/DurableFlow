@@ -29,4 +29,4 @@ For credible comparisons: record Git commit, hardware/CPU/memory, Docker resourc
 
 PostgreSQL/manual observations: run the exact source queries in [SQL inspection](sql-inspection.md), capture EXPLAIN (ANALYZE, BUFFERS), pg_stat_activity wait events, locks, transaction age, pg_stat_database commits/rollbacks/deadlocks/temp files, connection utilization, host CPU/IO and table/index/vacuum growth. `pg_stat_statements` requires environment-specific setup and is not assumed installed. More connections/indexes are not automatically better.
 
-Results status: **NOT RUN in this workspace**. All runtime measurements await JDK/Maven/Docker availability. Do not copy the teaching session's illustrative scaling numbers into reports or resume bullets.
+Results status: **NOT RUN in this workspace**. Java/Maven now work, but these Docker-backed measurements still await a functioning container engine and the preceding correctness checks. Do not copy the teaching session's illustrative scaling numbers into reports or resume bullets.
