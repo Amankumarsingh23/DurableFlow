@@ -34,7 +34,7 @@ public class FakeModelProvider implements ModelProvider {
         int attempt = attempts.computeIfAbsent(key, ignored -> new AtomicInteger()).incrementAndGet();
         invocations.add(new Invocation(request, key, attempt));
         beforeResponse.accept(request, key, attempt);
-        if (!Set.of("fake-recommendation-v1", "fake-text-v1", "fake-tool-refund-v1", "fake-tool-read-v1").contains(request.model())) {
+        if (!Set.of("fake-recommendation-v1", "fake-text-v1", "fake-tool-refund-v1", "fake-tool-read-v1", "fake-agent-refund-v1", "fake-agent-runaway-v1", "fake-agent-final-v1", "fake-agent-malformed-v1", "fake-agent-repeat-write-v1").contains(request.model())) {
             throw new ModelProviderException(ModelProviderException.Kind.INVALID_MODEL);
         }
         var outcome = script.get(Math.min(attempt - 1, script.size() - 1));
@@ -48,6 +48,26 @@ public class FakeModelProvider implements ModelProvider {
                 Math.min(request.maxOutputTokens(), 24));
         String requestId = "fake-" + UUID.nameUUIDFromBytes((key + ":" + attempt).getBytes(StandardCharsets.UTF_8));
         if (outcome == Outcome.MALFORMED_STRUCTURED) return new ModelResponse("not-json", null, id(), request.model(), usage, 7, requestId);
+        if (request.model().startsWith("fake-agent-")) {
+            if (!request.structuredOutput()) throw new ModelProviderException(ModelProviderException.Kind.INVALID_REQUEST);
+            var context = new com.fasterxml.jackson.databind.ObjectMapper().readTree(request.userContent());
+            int iteration = context.path("iteration").asInt();
+            Map<String,Object> decision;
+            if (request.model().equals("fake-agent-malformed-v1")) decision=Map.of("type","UNKNOWN","privateReasoning","must-never-be-checkpointed");
+            else if (request.model().equals("fake-agent-final-v1") || (request.model().equals("fake-agent-refund-v1") && iteration>=4)) {
+                String reference="";
+                for (var fact : context.path("data").path("priorFacts")) {
+                    if (fact.path("toolResult").path("toolName").asText().equals("refundOrder")) reference=fact.path("toolResult").path("providerReference").asText();
+                }
+                decision=Map.of("type","FINAL","answer",reference.isEmpty()?"Task complete.":"Refund "+reference+" issued.");
+            } else {
+                String tool=request.model().equals("fake-agent-runaway-v1")?"getOrder":request.model().equals("fake-agent-repeat-write-v1")?"refundOrder":
+                        iteration==1?"getOrder":iteration==2?"getRefundPolicy":"refundOrder";
+                var arguments=tool.equals("refundOrder")?Map.<String,Object>of("orderId","O-42","amount",4500):Map.<String,Object>of("orderId","O-42");
+                decision=Map.of("type","TOOL_CALL","toolName",tool,"arguments",arguments);
+            }
+            return new ModelResponse(null,decision,id(),request.model(),usage,7,requestId);
+        }
         if (request.model().startsWith("fake-tool-")) {
             if (!request.structuredOutput()) throw new ModelProviderException(ModelProviderException.Kind.INVALID_REQUEST);
             var proposal = request.model().equals("fake-tool-refund-v1")

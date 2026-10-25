@@ -1,5 +1,12 @@
 # DurableFlow
 
+Session 24 adds a [bounded durable agent loop](docs/bounded-agent-loop.md): persisted iterations,
+strict model decisions, Session 23 tool requests/approval, deterministic context and durable
+iteration/model/tool/token/cost limits. Fixed work templates use the existing worker; no
+arbitrary generated DAG or in-memory provider loop is introduced. V12 adds agent state;
+V1-V11 remain unchanged. Fake refund/runaway demos and tests are included; runtime verification
+is blocked by missing Java/Maven/Docker and demo execution policy.
+
 Session 23 adds [safe durable tools and MCP-style discovery](docs/tool-execution-mcp.md): an
 explicit tool allowlist, immutable request/fingerprint, separate permission/policy decisions,
 exact request-bound human SIGNAL approval and worker execution with provider idempotency.

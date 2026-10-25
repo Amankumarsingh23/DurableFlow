@@ -23,7 +23,8 @@ public class ToolApprovalGuard implements SignalAcceptanceGuard {
         var steps=WorkflowDefinitionDocument.steps(definition.getDefinitionJson());
         var node=ToolRequestService.step(steps,signal.signalNodeId());
         // Protect the graph BEFORE a request exists too: early buffered approvals must not bypass binding.
-        boolean protectedNode=node.dependsOn().stream().anyMatch(id -> "createToolRequest".equals(ToolRequestService.step(steps,id).activity()));
+        var bound=requests.forRun(run);
+        boolean protectedNode=bound.filter(r -> signal.signalNodeId().equals(r.approvalNodeId())).isPresent() || node.dependsOn().stream().anyMatch(id -> "createToolRequest".equals(ToolRequestService.step(steps,id).activity()));
         if(!protectedNode) return;
         var request=requests.forRun(run).orElseThrow(() -> conflict("TOOL_REQUEST_NOT_READY"));
         var payload=signal.payload();

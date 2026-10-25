@@ -1,5 +1,8 @@
 # Session 23: durable tools, policy and MCP-style interoperability
 
+Session 24 extends these boundaries with a [bounded durable agent loop](bounded-agent-loop.md),
+shared request factory and read-only getRefundPolicy fixture. This document describes Session 23.
+
 The model proposes. DurableFlow validates, authorizes, applies policy, optionally waits for
 human approval, then executes through the existing worker. One bounded proposal per workflow
 run is supported. There is no autonomous model/tool loop or model-generated workflow definition.

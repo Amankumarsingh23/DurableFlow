@@ -1,0 +1,13 @@
+{
+  "goal": "Determine refund eligibility for O-42 and process it if allowed.",
+  "scenario": "refund",
+  "limits": {
+    "maxIterations": 8,
+    "maxLogicalModelCalls": 8,
+    "maxLogicalToolCalls": 6,
+    "maxTotalTokens": 500000,
+    "maxEstimatedCostMicros": 1000000,
+    "maxContextChars": 12000,
+    "maxOutputTokens": 128
+  }
+}

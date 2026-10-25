@@ -12,7 +12,8 @@ public class ToolRegistry {
         for(var p:providers) if(indexed.put(p.id(),p)!=null) throw new IllegalArgumentException("Duplicate provider");
         this.providers=Map.copyOf(indexed);
         // Explicit code-owned allowlist. Never populate from discover().
-        tools=Map.of("getOrder",new ToolDescriptor("getOrder","Read a demo tenant-owned order",Map.of("orderId","order-id"),false,
+        tools=Map.of("getRefundPolicy",new ToolDescriptor("getRefundPolicy","Read the demo refund policy",Map.of("orderId","order-id"),false,
+                ToolRiskLevel.READ_ONLY,Set.of("ORDER_READ"),"fake-mcp","demo-v1"),"getOrder",new ToolDescriptor("getOrder","Read a demo tenant-owned order",Map.of("orderId","order-id"),false,
                 ToolRiskLevel.READ_ONLY,Set.of("ORDER_READ"),"fake-mcp","demo-v1"),
             "refundOrder",new ToolDescriptor("refundOrder","Refund a demo tenant-owned order",Map.of("orderId","order-id","amount","positive-money"),true,
                 ToolRiskLevel.HIGH_RISK_WRITE,Set.of("ORDER_REFUND"),"fake-mcp","demo-v1"));

@@ -15,6 +15,7 @@ public class FakeToolLedger {
         if(!fingerprint.equals(ToolJson.fingerprint(tool,args))) throw new IllegalArgumentException("TOOL_PROVIDER_IDENTITY");
         var data=new LinkedHashMap<String,Object>(); data.put("orderId",args.get("orderId"));
         if(tool.equals("refundOrder")) { data.put("amount",args.get("amount")); data.put("status","REFUNDED"); }
+        else if(tool.equals("getRefundPolicy")) { data.put("status","ELIGIBLE_FOR_REVIEW"); data.put("policyVersion","POL-RFD-042:v1"); data.put("maximumRefund",10000); }
         else if(tool.equals("getOrder")) { data.put("status","PAID"); data.put("tenantId","tenant-a"); }
         else throw new IllegalArgumentException("TOOL_PROVIDER_UNKNOWN");
         var result=new ToolResult(tool,data,"fake-"+UUID.nameUUIDFromBytes(key.getBytes(java.nio.charset.StandardCharsets.UTF_8)),

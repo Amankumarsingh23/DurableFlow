@@ -1,0 +1,13 @@
+{
+  "goal": "Keep reading O-42 until DurableFlow stops the loop.",
+  "scenario": "runaway",
+  "limits": {
+    "maxIterations": 2,
+    "maxLogicalModelCalls": 8,
+    "maxLogicalToolCalls": 8,
+    "maxTotalTokens": 500000,
+    "maxEstimatedCostMicros": 1000000,
+    "maxContextChars": 12000,
+    "maxOutputTokens": 128
+  }
+}
