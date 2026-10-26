@@ -1,0 +1,59 @@
+{
+  "harnessVersion" : "sql-service-v1",
+  "scenario" : "queue",
+  "workers" : 4,
+  "startConcurrency" : 4,
+  "requestedWorkflows" : 100,
+  "startedWorkflows" : 100,
+  "expectedTasks" : 100,
+  "completedTasks" : 100,
+  "completedWorkflows" : 100,
+  "errors" : 0,
+  "deadlineSeconds" : 60,
+  "fanout" : 0,
+  "workflowStartsPerSecond" : 204.09125409789726,
+  "completedTasksPerSecondIncludingAdvanceAndWaitSetup" : 28.10188698831768,
+  "measurements" : {
+    "advanceCallMs" : {
+      "p95" : 34.7012,
+      "p50" : 28.3071,
+      "samples" : 100,
+      "p99" : 37.6216
+    },
+    "completeCallMs" : {
+      "p95" : 23.1904,
+      "p50" : 20.2185,
+      "samples" : 100,
+      "p99" : 39.8552
+    },
+    "emptyClaimCallMs" : {
+      "p95" : 3.1783,
+      "p50" : 3.1216,
+      "samples" : 3,
+      "p99" : 3.1783
+    },
+    "queueWaitMs" : {
+      "p95" : 1772.487,
+      "p50" : 1608.102,
+      "samples" : 100,
+      "p99" : 1794.848
+    },
+    "successfulClaimCallMs" : {
+      "p95" : 27.5002,
+      "p50" : 22.0775,
+      "samples" : 100,
+      "p99" : 45.1922
+    },
+    "workflowStartMs" : {
+      "p95" : 22.9297,
+      "p50" : 16.3732,
+      "samples" : 100,
+      "p99" : 65.77
+    }
+  },
+  "javaVersion" : "21.0.13.0.2",
+  "os" : "Windows 11",
+  "postgresImage" : "postgres:17.6",
+  "valid" : true,
+  "limitations" : "In-process SQL/service harness, no HTTP/network/worker executor/heartbeat costs, no warmup; isolated container. Not a production capacity claim."
+}

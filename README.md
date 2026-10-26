@@ -2,7 +2,7 @@
 
 A Java/Spring Boot/PostgreSQL workflow and AI agent runtime built to study durable execution. It persists orchestration state, queues work transactionally, and separates short claim/completion transactions from external work. Leases, generation fencing, stable idempotency identities and checkpoints support recovery; the AI layer adds scoped retrieval, constrained model routing, policy-gated tools, human approval and durable budgets.
 
-**Verification in progress:** main/test compilation, executable packaging and **141 unit tests** now pass under Java 21. PostgreSQL integration, migrations, application startup, demos, chaos and benchmarks still await Docker/WSL repair. No production readiness, universal exactly-once or throughput claim is made. See the [verification board](docs/runtime-verification-progress.md), [project status](docs/project-status.md) and [runtime checklist](docs/runtime-verification-checklist.md).
+**Locally verified:** Java 21 compilation, executable packaging and the full default regression suite pass: **368 passed, zero failures/errors, one opt-in benchmark skipped** (369 selected). Flyway V1-V13, API startup, two independent workers, parallel DAG/Saga demos, retrieval-bound refund approval and bounded-agent termination were exercised. The synthetic golden suite passed **12/12 cases**. See the [verification board](docs/runtime-verification-progress.md), [recorded evidence](docs/verification/runtime-2026-10-26/regression.json) and [runtime checklist](docs/runtime-verification-checklist.md). This is local fake-provider verification; production readiness and universal exactly-once execution are not claimed.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
 - Persisted timer deadlines, early signal receipts, bounded retries and Saga compensation.
 - Immutable tool requests and exact approval binding; persisted agent/model/token/cost reservations.
 
-These are implemented contracts with authored tests, not runtime-verified results. History is audit beside authoritative state, not an event-sourced replay log. API authentication/reviewer authorization is **not implemented**; signal/approval endpoints must be protected before production exposure.
+These contracts are exercised by the local regression suite; the evidence and remaining operational limits are recorded on the verification board. History is audit beside authoritative state, not an event-sourced replay log. API authentication/reviewer authorization is **not implemented**; signal/approval endpoints must be protected before production exposure.
 
 ## Features
 

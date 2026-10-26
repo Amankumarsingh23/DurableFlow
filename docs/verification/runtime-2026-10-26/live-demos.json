@@ -1,0 +1,59 @@
+{
+  "start-parallel-order": {
+    "runId": "90418184-0105-41d2-aada-5c8a55f32db1",
+    "status": "COMPLETED",
+    "events": 20
+  },
+  "start-saga-order": {
+    "runId": "332e68e1-378b-4b78-af73-39eaf2c5232f",
+    "status": "COMPENSATED",
+    "events": 18
+  },
+  "start-retrieval-checkpoint": {
+    "runId": "125ba878-a10c-4f10-a13c-e7ec31840c38",
+    "status": "COMPLETED",
+    "events": 5
+  },
+  "refund": {
+    "agentExecutionId": "bbee7b62-d01a-4f8b-af17-8cf2eff74b2e",
+    "workflowRunId": "b0dd4c42-75ff-44a6-a1d3-45da203377e2",
+    "status": "COMPLETED",
+    "iterations": 4,
+    "logicalModelCalls": 4,
+    "providerAttempts": 4,
+    "logicalToolCalls": 3,
+    "inputTokens": 3037,
+    "outputTokens": 96,
+    "knownCostMicros": 3229,
+    "reservedTokens": 37959,
+    "reservedCostMicros": 39495,
+    "fallbackTransitions": 0,
+    "approvalWaits": 1,
+    "pendingApprovals": 0,
+    "terminationReason": "FINAL_ANSWER"
+  },
+  "runaway": {
+    "agentExecutionId": "737202a5-42d8-476a-8068-4bdd28042003",
+    "workflowRunId": "ce23d45d-57fe-483e-a330-97b29a7435a0",
+    "status": "LIMIT_REACHED",
+    "iterations": 2,
+    "logicalModelCalls": 2,
+    "providerAttempts": 2,
+    "logicalToolCalls": 2,
+    "inputTokens": 348,
+    "outputTokens": 48,
+    "knownCostMicros": 444,
+    "reservedTokens": 4932,
+    "reservedCostMicros": 5700,
+    "fallbackTransitions": 0,
+    "approvalWaits": 0,
+    "pendingApprovals": 0,
+    "terminationReason": "MAX_ITERATIONS"
+  },
+  "approval": {
+    "statusBeforeApproval": "AWAITING_APPROVAL",
+    "toolName": "refundOrder",
+    "exactSyntheticOrderAndAmountChecked": true,
+    "requestIdAndFingerprintBound": true
+  }
+}

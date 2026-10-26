@@ -1,0 +1,441 @@
+{
+  "date": "2026-10-26",
+  "testedCommit": "c07b1ada93c85e61830fef75ea565cce1b4caefa",
+  "command": "mvn -B -ntp -l target/runtime-verified-package.log package",
+  "exitCode": 0,
+  "timezone": "UTC via JAVA_TOOL_OPTIONS",
+  "debug": false,
+  "java": "Microsoft OpenJDK 21.0.13.0.2",
+  "maven": "3.9.16",
+  "postgresql": "17.6",
+  "dockerServer": "29.9.2",
+  "hardware": {
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "logicalProcessors": 16,
+    "memoryBytes": 16781885440,
+    "os": "Microsoft Windows 11 Home Single Language",
+    "dockerCpus": 16,
+    "dockerMemoryBytes": 8130555904
+  },
+  "totals": {
+    "tests": 369,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "passed": 368,
+  "skipReason": "BenchmarkIntegrationTest requires explicit opt-in; run separately",
+  "suites": [
+    {
+      "name": "io.durableflow.agent.AgentContractsTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.601"
+    },
+    {
+      "name": "io.durableflow.agent.AgentModelActivityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.429"
+    },
+    {
+      "name": "io.durableflow.ai.ModelGatewayTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.178"
+    },
+    {
+      "name": "io.durableflow.ai.RetrievalTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.14"
+    },
+    {
+      "name": "io.durableflow.ai.routing.ModelRouterTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.14"
+    },
+    {
+      "name": "io.durableflow.ai.routing.ProviderCircuitBreakerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.018"
+    },
+    {
+      "name": "io.durableflow.ChildWorkflowIntegrationTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "19.829"
+    },
+    {
+      "name": "io.durableflow.DurableSignalIntegrationTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "7.885"
+    },
+    {
+      "name": "io.durableflow.DurableTimerIntegrationTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.813"
+    },
+    {
+      "name": "io.durableflow.evaluation.EvalRunnerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.089"
+    },
+    {
+      "name": "io.durableflow.observability.AiTelemetryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.026"
+    },
+    {
+      "name": "io.durableflow.observability.TelemetryBoundaryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.037"
+    },
+    {
+      "name": "io.durableflow.PaymentIdempotencyIntegrationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.991"
+    },
+    {
+      "name": "io.durableflow.PersistenceIntegrationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.367"
+    },
+    {
+      "name": "io.durableflow.PostgresTaskQueueIntegrationTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.579"
+    },
+    {
+      "name": "io.durableflow.RetryIntegrationTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "4.193"
+    },
+    {
+      "name": "io.durableflow.security.BoundedRequestFilterTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.01"
+    },
+    {
+      "name": "io.durableflow.security.ResourceLimitsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.374"
+    },
+    {
+      "name": "io.durableflow.security.SecurityBoundaryIntegrationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.932"
+    },
+    {
+      "name": "io.durableflow.TaskLeaseIntegrationTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.288"
+    },
+    {
+      "name": "io.durableflow.tools.ToolContractsTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.018"
+    },
+    {
+      "name": "io.durableflow.worker.BenchmarkIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1",
+      "time": "0.0"
+    },
+    {
+      "name": "io.durableflow.worker.BoundedAgentIntegrationTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "13.975"
+    },
+    {
+      "name": "io.durableflow.worker.GoldenEvalIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.877"
+    },
+    {
+      "name": "io.durableflow.worker.HandlerExecutionsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.246"
+    },
+    {
+      "name": "io.durableflow.worker.ModelActivityIntegrationTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.08"
+    },
+    {
+      "name": "io.durableflow.worker.ModelRoutingIntegrationTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "9.524"
+    },
+    {
+      "name": "io.durableflow.worker.ParallelDagIntegrationTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "6.938"
+    },
+    {
+      "name": "io.durableflow.worker.RagRetrievalIntegrationTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.072"
+    },
+    {
+      "name": "io.durableflow.worker.retry.RetryPolicyTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.005"
+    },
+    {
+      "name": "io.durableflow.worker.SagaCompensationIntegrationTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "4.875"
+    },
+    {
+      "name": "io.durableflow.worker.TelemetryFailureIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.565"
+    },
+    {
+      "name": "io.durableflow.worker.TimeoutShutdownIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.78"
+    },
+    {
+      "name": "io.durableflow.worker.ToolExecutionIntegrationTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "7.503"
+    },
+    {
+      "name": "io.durableflow.worker.WorkerHeartbeatsTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.422"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.ActivityLifecycleTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.041"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.ActivityRegistryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.PaymentIdempotencyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.004"
+    },
+    {
+      "name": "io.durableflow.workflow.activity.SagaIdempotencyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002"
+    },
+    {
+      "name": "io.durableflow.workflow.definition.WorkflowDefinitionValidatorTest",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.043"
+    },
+    {
+      "name": "io.durableflow.workflow.definition.WorkflowGraphTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.003"
+    },
+    {
+      "name": "io.durableflow.workflow.task.ActivityTaskLifecycleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.002"
+    },
+    {
+      "name": "io.durableflow.workflow.timer.TimerPollingConfigurationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.096"
+    },
+    {
+      "name": "io.durableflow.WorkflowApiIntegrationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.831"
+    },
+    {
+      "name": "io.durableflow.WorkflowConcurrencyIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.568"
+    },
+    {
+      "name": "io.durableflow.WorkflowEngineIntegrationTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.955"
+    },
+    {
+      "name": "io.durableflow.WorkflowHistoryIntegrationTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.282"
+    },
+    {
+      "name": "io.durableflow.WorkflowRecoveryIntegrationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "4.832"
+    },
+    {
+      "name": "io.durableflow.WorkflowScheduleIntegrationTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "4.073"
+    }
+  ],
+  "jarSha256": "6fa4044bbe5a7f195251931b256c377e62094f3ca23024d1af695f16a1fc308a",
+  "limits": [
+    "Local Windows/Docker verification with fake providers",
+    "Controlled failure hooks/context restarts are not actual OS crash/network partition/DB restore drills",
+    "Two independent workers verified functional coordination, not multi-host scaling"
+  ],
+  "failuresFixed": [
+    "Legacy JVM Asia/Calcutta timezone rejected at JDBC startup: use UTC in every JVM",
+    "Persistence assertion expected V10 although migrations reach V13",
+    "Cached Spring contexts kept polling stopped class-scoped databases: close contexts after each class",
+    "Golden quality-floor scenario dereferenced absent failed-activity output",
+    "Refund amount compared serialization text instead of exact numeric 4500"
+  ],
+  "priorRuns": [
+    "runtime-postgres-current.log failed timezone startup",
+    "runtime-regression.log deliberately interrupted to fix context lifecycle",
+    "runtime-regression-fixed.log: 369 tests, 2 failures, 1 intentional benchmark skip",
+    "runtime-final-regression.log interrupted to compile the second observed test correction"
+  ]
+}

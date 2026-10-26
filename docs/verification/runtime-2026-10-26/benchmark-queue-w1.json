@@ -1,0 +1,53 @@
+{
+  "harnessVersion" : "sql-service-v1",
+  "scenario" : "queue",
+  "workers" : 1,
+  "startConcurrency" : 4,
+  "requestedWorkflows" : 100,
+  "startedWorkflows" : 100,
+  "expectedTasks" : 100,
+  "completedTasks" : 100,
+  "completedWorkflows" : 100,
+  "errors" : 0,
+  "deadlineSeconds" : 60,
+  "fanout" : 0,
+  "workflowStartsPerSecond" : 218.1245347131019,
+  "completedTasksPerSecondIncludingAdvanceAndWaitSetup" : 19.06912029800306,
+  "measurements" : {
+    "advanceCallMs" : {
+      "samples" : 100,
+      "p99" : 22.6562,
+      "p95" : 18.6916,
+      "p50" : 13.053
+    },
+    "completeCallMs" : {
+      "samples" : 100,
+      "p99" : 17.7897,
+      "p95" : 12.7718,
+      "p50" : 9.0692
+    },
+    "queueWaitMs" : {
+      "samples" : 100,
+      "p99" : 3285.252,
+      "p95" : 3166.016,
+      "p50" : 2427.746
+    },
+    "successfulClaimCallMs" : {
+      "samples" : 100,
+      "p99" : 18.7539,
+      "p95" : 14.6605,
+      "p50" : 10.1871
+    },
+    "workflowStartMs" : {
+      "samples" : 100,
+      "p99" : 51.5471,
+      "p95" : 21.0143,
+      "p50" : 16.4636
+    }
+  },
+  "javaVersion" : "21.0.13.0.2",
+  "os" : "Windows 11",
+  "postgresImage" : "postgres:17.6",
+  "valid" : true,
+  "limitations" : "In-process SQL/service harness, no HTTP/network/worker executor/heartbeat costs, no warmup; isolated container. Not a production capacity claim."
+}

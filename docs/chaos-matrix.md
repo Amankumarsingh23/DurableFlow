@@ -1,6 +1,6 @@
 # Deterministic chaos and recovery matrix
 
-These tests simulate failure points with controlled hooks, expired database deadlines and fresh application contexts. They are not evidence of an actual OS kill, network partition or database failover. No recovery scenario is claimed to have run in this environment.
+These tests simulate failure points with controlled hooks, expired database deadlines and fresh application contexts. They are not evidence of an actual OS kill, network partition or database failover. The full local regression run on 2026-10-26 passed the scenarios below; see [per-suite evidence](verification/runtime-2026-10-26/regression.json). Actual OS-crash, network-partition and database-restore drills remain deferred.
 
 ```powershell
 .\scripts\run-chaos.ps1 -Scenario all

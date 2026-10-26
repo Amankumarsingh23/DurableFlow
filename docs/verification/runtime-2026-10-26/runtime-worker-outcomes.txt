@@ -1,0 +1,6 @@
+       worker_id       |  status   | count
+-----------------------+-----------+-------
+ verification-worker-1 | COMPLETED |    17
+ verification-worker-2 | COMPLETED |    11
+ verification-worker-2 | FAILED    |     1
+(3 rows)

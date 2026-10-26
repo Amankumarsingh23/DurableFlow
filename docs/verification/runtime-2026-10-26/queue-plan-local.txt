@@ -1,0 +1,43 @@
+BEGIN
+                                                                                                                                                                                                                                QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=20.05..20.06 rows=1 width=159) (actual time=0.062..0.064 rows=0 loops=1)
+   Buffers: shared hit=7
+   ->  LockRows  (cost=20.05..20.06 rows=1 width=159) (actual time=0.062..0.063 rows=0 loops=1)
+         Buffers: shared hit=7
+         ->  Sort  (cost=20.05..20.05 rows=1 width=159) (actual time=0.061..0.063 rows=0 loops=1)
+               Sort Key: (CASE WHEN ((t.status)::text = 'READY'::text) THEN t.available_at ELSE t.lease_expires_at END), t.created_at, t.id
+               Sort Method: quicksort  Memory: 25kB
+               Buffers: shared hit=7
+               ->  Nested Loop  (cost=7.41..20.04 rows=1 width=159) (actual time=0.043..0.044 rows=0 loops=1)
+                     Join Filter: ((((t.task_kind)::text = 'FORWARD'::text) AND (((r.status)::text = 'RUNNING'::text) OR (((r.status)::text = 'COMPENSATING'::text) AND ((a.status)::text = 'RUNNING'::text) AND (t.lease_generation > 0)))) OR (((t.task_kind)::text = 'COMPENSATION'::text) AND ((r.status)::text = 'COMPENSATING'::text)))
+                     Buffers: shared hit=1
+                     ->  Hash Right Join  (cost=7.27..18.81 rows=1 width=186) (actual time=0.043..0.044 rows=0 loops=1)
+                           Hash Cond: (c.id = t.compensation_execution_id)
+                           Filter: ((((t.status)::text = 'READY'::text) AND (t.available_at <= statement_timestamp()) AND (((t.lease_generation = 0) AND ((COALESCE(c.status, a.status))::text = 'PENDING'::text)) OR ((t.lease_generation > 0) AND ((COALESCE(c.status, a.status))::text = 'RUNNING'::text)))) OR (((t.status)::text = 'CLAIMED'::text) AND (t.lease_expires_at <= statement_timestamp()) AND ((COALESCE(c.status, a.status))::text = 'RUNNING'::text)))
+                           Buffers: shared hit=1
+                           ->  Seq Scan on compensation_execution c  (cost=0.00..11.00 rows=100 width=156) (never executed)
+                           ->  Hash  (cost=7.25..7.25 rows=2 width=164) (actual time=0.036..0.037 rows=0 loops=1)
+                                 Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                                 Buffers: shared hit=1
+                                 ->  Hash Right Join  (cost=1.90..7.25 rows=2 width=164) (actual time=0.036..0.037 rows=0 loops=1)
+                                       Hash Cond: (a.id = t.activity_execution_id)
+                                       Buffers: shared hit=1
+                                       ->  Seq Scan on activity_execution a  (cost=0.00..5.27 rows=27 width=47) (never executed)
+                                       ->  Hash  (cost=1.87..1.87 rows=2 width=133) (actual time=0.028..0.028 rows=0 loops=1)
+                                             Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                                             Buffers: shared hit=1
+                                             ->  Seq Scan on activity_task t  (cost=0.00..1.87 rows=2 width=133) (actual time=0.028..0.028 rows=0 loops=1)
+                                                   Filter: ((((status)::text = 'READY'::text) AND (available_at <= statement_timestamp()) AND ((lease_generation = 0) OR (lease_generation > 0))) OR (((status)::text = 'CLAIMED'::text) AND (lease_expires_at <= statement_timestamp())))
+                                                   Rows Removed by Filter: 29
+                                                   Buffers: shared hit=1
+                     ->  Index Scan using workflow_run_pkey on workflow_run r  (cost=0.14..1.20 rows=1 width=32) (never executed)
+                           Index Cond: (id = COALESCE(a.workflow_run_id, c.workflow_run_id))
+                           Filter: (((status)::text = 'RUNNING'::text) OR ((status)::text = 'COMPENSATING'::text) OR ((status)::text = 'COMPENSATING'::text))
+ Planning:
+   Buffers: shared hit=380 dirtied=6
+ Planning Time: 1.225 ms
+ Execution Time: 0.138 ms
+(37 rows)
+
+ROLLBACK

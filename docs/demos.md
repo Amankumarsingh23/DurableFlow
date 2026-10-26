@@ -1,6 +1,6 @@
 # Two primary demo stories
 
-Prerequisites and commands are in [runtime verification](runtime-verification-checklist.md). These demos have **not run here**. Use disposable local data. Run the default API and one or more separate `worker` profile processes against the same PostgreSQL database. Assign each worker a unique WORKER_ID. PowerShell scripts may be blocked by local execution policy; do not bypass it silently. Equivalent Maven test commands are provided for automated scenarios.
+Prerequisites and commands are in [runtime verification](runtime-verification-checklist.md). The parallel DAG, compensated Saga, retrieval checkpoint, approved refund and bounded runaway demos **passed locally on 2026-10-26**, with one API and two independent worker JVMs. See [evidence](verification/runtime-2026-10-26/live-demos.json). Use disposable local data. Run the default API and one or more separate `worker` profile processes against the same PostgreSQL database. Assign each worker a unique WORKER_ID. PowerShell scripts may be blocked by local execution policy; do not bypass it silently. Equivalent Maven test commands are provided for automated scenarios.
 
 ## A. Core durability / ChaosCommerce
 

@@ -1,0 +1,6 @@
+    tool_name    | effects
+-----------------+---------
+ getOrder        |       3
+ getRefundPolicy |       1
+ refundOrder     |       1
+(3 rows)

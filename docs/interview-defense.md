@@ -1,12 +1,12 @@
 # Interview defense
 
-Describe implemented mechanisms and authored assertions; do not present unrun tests or illustrative numbers as evidence. Runtime verification is the next milestone.
+Describe implemented mechanisms and authored assertions; do not present unrun tests or illustrative numbers as evidence. The [local verification board](runtime-verification-progress.md) records the passing regression suite, demos and measurement limits.
 
 | Question | Concise answer |
 | --- | --- |
 | What problem does DurableFlow solve? | Long-running work must survive process failure and delayed inputs without losing state or blindly repeating effects. DurableFlow persists orchestration and executes work through fenced workers. |
 | Why persist workflow state? | Process memory disappears. Persisted definitions, status, outputs and waits allow readiness to be reconstructed after restart. JVM stacks are not resumed. |
-| Why PostgreSQL queue? | Task/state/history transitions can commit together using the dependency already required for durability. This avoids an initial broker dual-write gap and extra operations. Capacity remains unmeasured. |
+| Why PostgreSQL queue? | Task/state/history transitions can commit together using the dependency already required for durability. This avoids an initial broker dual-write gap and extra operations. Local SQL/service smoke measurements do not establish production capacity. |
 | Why SKIP LOCKED? | Concurrent consumers skip locked candidate rows rather than waiting behind one claim. It coordinates short claim transactions, not the whole handler execution. |
 | Row lock vs lease? | Row locks protect a transaction; a persisted expiring lease represents ownership after the transaction commits. No DB lock is held during external work. |
 | Lease vs heartbeat? | The lease expires unless renewed. Heartbeats extend a valid lease while work continues; they cannot resurrect already expired ownership. |

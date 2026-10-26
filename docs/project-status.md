@@ -1,6 +1,6 @@
 # DurableFlow project status - runtime verification started
 
-Current evidence: [runtime verification board](runtime-verification-progress.md). Main/test compilation, packaging and 141 unit tests pass; Docker-backed checks remain pending.
+Current evidence: [runtime verification board](runtime-verification-progress.md). Full local regression and packaging pass: **368 passed, zero failures/errors, one intentional benchmark skip**. Flyway V1-V13, API startup, two independent workers, live DAG/Saga/agent demos and 12 synthetic golden cases have passed.
 
 Implementation status is separate from execution evidence. Major feature sessions end here; next work is runtime verification, defect correction, evidence collection and presentation polish. This repository is not claimed production-ready.
 
@@ -28,27 +28,13 @@ Checks executed on 2026-10-26 in the Windows workspace:
 
 ## RUNTIME VERIFIED
 
-Main compilation (210 source files), test compilation (49 source files), executable JAR packaging and the complete non-integration unit selection are now verified under Microsoft OpenJDK 21.0.13.0.2 / Maven 3.9.16. Unit result: **141 tests, zero failures/errors/skips**. Three initial test compilation errors were fixed without weakening assertions. See the [sanitized unit evidence](verification/unit-results-2026-10-26.json).
+On 2026-10-26, Microsoft OpenJDK 21.0.13.0.2 / Maven 3.9.16 / Docker Desktop 29.9.2 / PostgreSQL 17.6 executed the full default test selection through `mvn -B -ntp package`: **369 selected, 368 passed, zero failures/errors, one explicitly opt-in benchmark skipped** across 49 suites. Main/test compilation and executable packaging passed. See [per-suite counts, tested commit, hardware and corrections](verification/runtime-2026-10-26/regression.json).
 
-Migrations, application startup, PostgreSQL integration/chaos/evaluation, demos and benchmarks remain unverified. No full-suite/production/capacity claim is implied.
+Flyway applied and Hibernate validated V1-V13 against disposable integration databases and the shared Compose database. A live API returned UP; two independent worker JVMs both processed tasks. Live parallel DAG completion, compensated Saga, retrieval checkpoint, exact request-bound refund approval, FINAL_ANSWER termination and MAX_ITERATIONS termination passed. One fake refund effect was recorded. The intentional failed Saga shipment is retained in the task-outcome evidence.
 
-## NOT YET VERIFIED
+Controlled lease/reclaim/fencing, crash-after-effect idempotency, early signals, overdue timers, routing/fallback/budgets, resource bounds, immutable approved payloads and telemetry-isolation assertions passed in the regression suite. Golden evaluation: **12/12 synthetic cases**, [report](verification/runtime-2026-10-26/eval-report.md). These are fake-provider and controlled-hook results, not real-provider or arbitrary process-crash guarantees. See the verification board for the separate opt-in benchmark evidence.
 
-The following table records the initial Session 27 setup attempts, **before** portable Java/Maven setup. The current verification board above supersedes the old missing-Java/Maven blockers; Docker/WSL and script policy remain unresolved.
-
-| Initial attempt / category | Initial result |
-| --- | --- |
-| java -version, mvn -version, docker version | Commands not found on PATH |
-| mvn -B -DskipTests compile, mvn -B test | Maven unavailable; neither compilation nor tests ran |
-| docker compose up -d --wait postgres | Docker unavailable; PostgreSQL/migrations not started |
-| mvn -B spring-boot:run / java -jar target/durableflow-0.0.1-SNAPSHOT.jar | Maven/Java unavailable; Flyway/app startup blocked |
-| BenchmarkIntegrationTest smoke via Maven | Maven unavailable; no new benchmark report |
-| run-chaos.ps1, run-benchmarks.ps1, demo-bounded-agent.ps1 | PowerShell policy rejects script loading; policy was not changed |
-| GET localhost:8080/actuator/health, 2-second timeout | Timed out; live API unverified |
-| Security/resource bounds and strict DTO behavior | Tests authored; Java/Spring/HTTP behavior awaits execution |
-| Independent worker processes, real OS kills, network faults and DB restore | Not performed; controlled fixtures are not substitutes for these experiments |
-
-Follow [runtime-verification-checklist.md](runtime-verification-checklist.md), retain raw evidence with commit/settings, and update only categories actually verified. Old target reports must not be presented as a fresh invocation's result.
+Initial missing-tool/Docker failures and subsequent timezone, test lifecycle, stale schema assertion, absent-output and numeric-format corrections are preserved in the evidence history. Portable tools are outside Git; PowerShell script policy was not changed. The earlier [unit-only summary](verification/unit-results-2026-10-26.json) remains historical evidence, superseded by the complete run.
 
 ## DEFERRED
 

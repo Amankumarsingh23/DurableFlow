@@ -1,0 +1,1034 @@
+{
+  "suiteId" : "durableflow-golden",
+  "suiteVersion" : "1",
+  "versions" : {
+    "retrievalStrategy" : "per-case-v1",
+    "prompt" : "agent-context-v1",
+    "toolPolicy" : "demo-policy-v1",
+    "workflowDefinition" : "session26-fixtures-v1",
+    "retrievalIndex" : "policies-v1/local-v1",
+    "modelRoutingPolicy" : "cost-quality-v1",
+    "dataset" : "golden-v1"
+  },
+  "total" : 12,
+  "passed" : 12,
+  "failed" : 0,
+  "passRate" : 1.0,
+  "failuresByCategory" : { },
+  "aggregates" : {
+    "costMicrosAverage" : 333.3333333333333,
+    "costMicrosMeasuredCases" : 9.0,
+    "costMicrosTotal" : 3000.0,
+    "fallbacksAverage" : 0.1111111111111111,
+    "fallbacksMeasuredCases" : 9.0,
+    "fallbacksTotal" : 1.0,
+    "iterationsAverage" : 1.5714285714285714,
+    "iterationsMeasuredCases" : 7.0,
+    "iterationsTotal" : 11.0,
+    "modelCallsAverage" : 1.4444444444444444,
+    "modelCallsMeasuredCases" : 9.0,
+    "modelCallsTotal" : 13.0,
+    "providerAttemptsAverage" : 1.7777777777777777,
+    "providerAttemptsMeasuredCases" : 9.0,
+    "providerAttemptsTotal" : 16.0,
+    "recallAtKAverage" : 1.0,
+    "recallAtKMeasuredCases" : 2.0,
+    "recallAtKTotal" : 2.0,
+    "reciprocalRankAverage" : 1.0,
+    "reciprocalRankMeasuredCases" : 2.0,
+    "reciprocalRankTotal" : 2.0,
+    "toolCallsAverage" : 1.1428571428571428,
+    "toolCallsMeasuredCases" : 7.0,
+    "toolCallsTotal" : 8.0
+  },
+  "results" : [ {
+    "caseId" : "A-final-agent",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "SCHEMA",
+      "field" : "schemaValid",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "toolCalls",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "iterations",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "costMicros",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 163.0,
+      "providerAttempts" : 1.0,
+      "iterations" : 1.0,
+      "toolCalls" : 0.0,
+      "modelCalls" : 1.0
+    }
+  }, {
+    "caseId" : "A-read-only",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "TOOLS",
+      "field" : "toolName",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "APPROVAL",
+      "field" : "approvalRequired",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "refundEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "iterations",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 163.0,
+      "providerAttempts" : 1.0,
+      "iterations" : 1.0,
+      "toolCalls" : 1.0,
+      "modelCalls" : 1.0
+    }
+  }, {
+    "caseId" : "B-approved-refund",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "SCHEMA",
+      "field" : "schemaValid",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "TOOLS",
+      "field" : "toolName",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "TOOLS",
+      "field" : "fingerprint",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "APPROVAL",
+      "field" : "approvalRequired",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "effectsBeforeApproval",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "DURABILITY",
+      "field" : "refundEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "costMicros",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 1361.0,
+      "providerAttempts" : 4.0,
+      "iterations" : 4.0,
+      "toolCalls" : 3.0,
+      "modelCalls" : 4.0
+    }
+  }, {
+    "caseId" : "C-denied-refund",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "APPROVAL",
+      "field" : "approvalRequired",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "reason",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "refundEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 165.0,
+      "providerAttempts" : 1.0,
+      "iterations" : 1.0,
+      "toolCalls" : 1.0,
+      "modelCalls" : 1.0
+    }
+  }, {
+    "caseId" : "D-exact-identifier",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "RETRIEVAL",
+      "field" : "sourceIds",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "PRIVACY",
+      "field" : "sourceIds",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "contextChars",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualWorkflowVersions" : "[Golden/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "actualRetrievalStrategy" : "SPARSE",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "reciprocalRank" : 1.0,
+      "recallAtK" : 1.0
+    }
+  }, {
+    "caseId" : "E-hybrid-policy",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "RETRIEVAL",
+      "field" : "sourceIds",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "PRIVACY",
+      "field" : "sourceIds",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualWorkflowVersions" : "[Golden/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "actualRetrievalStrategy" : "HYBRID",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "reciprocalRank" : 1.0,
+      "recallAtK" : 1.0
+    }
+  }, {
+    "caseId" : "F-hostile-document",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "RETRIEVAL",
+      "field" : "sourceIds",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "APPROVAL",
+      "field" : "approvalRequired",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "effectsBeforeApproval",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "PRIVACY",
+      "field" : "unauthorizedDataAbsent",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "reason",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "refundEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1",
+      "toolPolicy" : "demo-policy-v1",
+      "actualRetrievalStrategy" : "SPARSE",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1, Golden/1]",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "prompt" : "agent-context-v1",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "agentContext" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "modelRequest" : "1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 415.0,
+      "providerAttempts" : 1.0,
+      "iterations" : 1.0,
+      "toolCalls" : 1.0,
+      "modelCalls" : 1.0
+    }
+  }, {
+    "caseId" : "G-unknown-tool",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "SCHEMA",
+      "field" : "schemaValid",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "reason",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "unauthorizedExecutions",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "toolRequests",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 163.0,
+      "providerAttempts" : 1.0,
+      "iterations" : 1.0,
+      "toolCalls" : 0.0,
+      "modelCalls" : 1.0
+    }
+  }, {
+    "caseId" : "H-provider-fallback",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "ROUTING",
+      "field" : "finalProvider",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "ROUTING",
+      "field" : "fallbacks",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "ROUTING",
+      "field" : "providerAttempts",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}, {provider=fake-b, model=premium-v1}]",
+      "actualWorkflowVersions" : "[Golden/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "modelCalls" : 1.0,
+      "costMicros" : 132.0,
+      "fallbacks" : 1.0,
+      "providerAttempts" : 3.0
+    }
+  }, {
+    "caseId" : "I-no-quality-downgrade",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "ROUTING",
+      "field" : "fallbacks",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "weakProviderExecutions",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "status",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "reason",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[Golden/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "modelCalls" : 1.0,
+      "costMicros" : 0.0,
+      "fallbacks" : 0.0,
+      "providerAttempts" : 2.0
+    }
+  }, {
+    "caseId" : "J-runaway-bound",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "WORKFLOW",
+      "field" : "reason",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "iterations",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "iterationsBeyondLimit",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "reservedCostMicros",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "BUDGET",
+      "field" : "reservedTokens",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : {
+      "fallbacks" : 0.0,
+      "costMicros" : 438.0,
+      "providerAttempts" : 2.0,
+      "iterations" : 2.0,
+      "toolCalls" : 2.0,
+      "modelCalls" : 2.0
+    }
+  }, {
+    "caseId" : "K-crash-dedup",
+    "caseVersion" : "1",
+    "passed" : true,
+    "checks" : [ {
+      "category" : "DURABILITY",
+      "field" : "refundEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "DURABILITY",
+      "field" : "duplicateExternalEffects",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "DURABILITY",
+      "field" : "staleCompletionsAccepted",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "SAFETY",
+      "field" : "approvedPayloadMutationsAccepted",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "WORKFLOW",
+      "field" : "requestStatus",
+      "passed" : true,
+      "detail" : "MATCH"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalStrategy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "prompt",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "toolPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "workflowDefinition",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "retrievalIndex",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "modelRoutingPolicy",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    }, {
+      "category" : "VERSIONS",
+      "field" : "dataset",
+      "passed" : true,
+      "detail" : "VERSION_COMPARISON"
+    } ],
+    "actualVersions" : {
+      "toolPolicy" : "demo-policy-v1",
+      "modelRoutingPolicy" : "cost-quality-v1",
+      "actualProviderModels" : "[{provider=fake-a, model=balanced-v1}]",
+      "actualWorkflowVersions" : "[DurableFlowAgentHostV1/1, DurableFlowAgentModelV1/1, DurableFlowAgentReadV1/1, DurableFlowAgentWriteV1/1]",
+      "workflowDefinition" : "session26-fixtures-v1",
+      "prompt" : "agent-context-v1",
+      "modelRequest" : "1",
+      "retrievalIndex" : "policies-v1/local-v1",
+      "agentContext" : "1",
+      "dataset" : "golden-v1",
+      "retrievalStrategy" : "per-case-v1"
+    },
+    "measurements" : { }
+  } ]
+}

@@ -1,27 +1,40 @@
 # Runtime verification board - 2026-10-26
 
-Feature freeze remains in force. This verification pass starts from `e68e8aa`, fixes the test-resource cleanup mismatch described below, and records actual execution evidence. No push has been performed: the user authorized pushing only after the intended checks pass, and Docker-backed verification is still blocked.
+The local correctness gates pass on tested commit `c07b1ad`; feature freeze remains in force. The full default test selection ran through Maven's package lifecycle, including executable repackaging. [Machine-readable evidence](verification/runtime-2026-10-26/regression.json) records versions, hardware, per-suite counts, artifact hash and earlier failures. The earlier unit-only evidence remains historical.
 
-| Gate | Evidence / status |
+| Gate | Actual result |
 | --- | --- |
-| Java | PASS - Microsoft OpenJDK 21.0.13.0.2, portable vendor archive with published SHA-256 verified |
-| Maven | PASS - 3.9.16, portable Apache Maven archive with published SHA-512 verified |
-| Main compilation | PASS - `mvn -B -U -DskipTests compile`, 210 main source files compiled with release 21 |
-| Test compilation | PASS after cleanup fix - all 49 test source files compiled |
-| Unit/non-integration selection | PASS - 141 tests, zero failures/errors/skips across 23 suites |
-| Executable packaging | PASS - `mvn -B -ntp -DskipTests package`; this command skips execution, it does not imply full-suite success |
-| Docker / WSL | BLOCKED - Docker Desktop absent; wsl --status reports Class not registered, Wsl/CallMsi/Install/REGDB_E_CLASSNOTREG; user is installing/repairing Docker Desktop |
-| Flyway V1-V13 / PostgreSQL integration | BLOCKED - PersistenceIntegrationTest probe reports one setup error: Could not find a valid Docker environment; no DB assertions or migrations ran |
-| Application startup / core durability demo | PENDING PostgreSQL and integration validation |
-| DAG/Saga and AI refund demos | PENDING |
-| Chaos / independent worker verification | PENDING |
-| Benchmarks / measured scaling | PENDING - no numbers generated |
-| README claims fully verified / resume finalized | PENDING complete evidence |
-| Push | NOT PERFORMED - conditional checks incomplete |
+| Java / Maven | PASS - Microsoft OpenJDK 21.0.13.0.2 / Maven 3.9.16 |
+| Docker / PostgreSQL | PASS - Docker Server 29.9.2, Linux engine, postgres:17.6 healthy |
+| Compile / test compile / package | PASS - executable JAR produced |
+| Full default regression | PASS - 369 selected, 368 passed, zero failures/errors; benchmark intentionally skipped |
+| Flyway / Hibernate | PASS - V1-V13 applied/validated in test containers and shared Compose database |
+| API startup / health | PASS - separate API JVM, HTTP health UP |
+| Independent worker coordination | PASS - two worker JVMs; worker 1 completed 17 tasks, worker 2 completed 11 plus the intentional failed Saga shipment |
+| Live core demos | PASS - parallel DAG COMPLETED; failing-shipment Saga COMPENSATED |
+| Live AI demos | PASS - retrieval checkpoint, exact request/fingerprint-bound synthetic approval, one refund effect, FINAL_ANSWER; runaway stops at MAX_ITERATIONS |
+| Controlled chaos | PASS within full regression - leases/reclaim/fencing, effect replay, timer/signal recovery, budgets/fallback and telemetry isolation |
+| Golden evaluation | PASS - 12/12 synthetic cases; [report](verification/runtime-2026-10-26/eval-report.md) |
+| Opt-in benchmark smoke | PASS - seven separate opt-in runs, zero errors; queue 1/4/16 threads plus start/DAG/timer/signal; [evidence and limits](benchmarks.md) |
+| Production readiness | NOT CLAIMED - deferred items below |
 
-## First failure and correction
+## Corrections discovered by execution
 
-Main compilation succeeded. Test compilation then reported three errors in `AiTelemetryTest` and `TelemetryBoundaryTest`: the pinned Micrometer `SimpleMeterRegistry` has a close method but does not implement AutoCloseable. Replaced the invalid try-with-resources declarations with explicit finally cleanup. No assertions were removed, weakened or disabled. A subsequent real `PersistenceIntegrationTest` attempt failed in Testcontainers setup with one Docker-environment error, before PostgreSQL or its assertions could run. The complete selected unit set was rerun and passed. Raw logs/XML remain in ignored `target/`; a sanitized machine-readable summary is committed at [verification/unit-results-2026-10-26.json](verification/unit-results-2026-10-26.json).
+- Three invalid try-with-resources uses of SimpleMeterRegistry prevented test compilation; explicit finally cleanup fixed them without changing assertions.
+- This Windows JVM defaults to legacy Asia/Calcutta, rejected by the PostgreSQL image at JDBC startup. Explicit UTC in every verification/API/worker JVM resolves it. Hibernate's JDBC time zone alone does not control driver startup.
+- The persistence test still expected migration 10; it now requires 13 and no pending migrations.
+- Cached Spring test contexts kept pollers/pools alive after class-owned databases stopped. Integration classes now close their contexts after each class.
+- The golden quality-floor scenario dereferenced absent output from a correctly failed activity. It now records NONE without changing route/quality expectations.
+- A persisted refund amount assertion expected scientific notation. It now compares the exact numeric amount 4500; immutable-request and decision-mutation rejection checks remain intact.
+- README/demo history URLs used /history; the implemented endpoint is /events. Corrected and exercised live.
+
+The first complete run selected 369 tests and exposed two assertion/fixture failures; both were fixed before the clean full rerun. Two diagnostic runs were deliberately interrupted to apply observed corrections; neither is represented as a pass. Raw logs and a preserved full-suite Surefire archive remain under ignored target/. Only sanitized summaries and synthetic evaluation/benchmark reports are committed.
+
+## What remains outside this completed local correctness pass
+
+Real LLM/vector/MCP transports, production authentication and reviewer authorization, tenant quotas, history pagination/retention, general automatic run reconciliation/agent driving, cluster-wide circuit state, production ingress/monitoring, backup/PITR/restore/failover drills, actual OS-kill/network-partition drills, sustained HTTP/soak load and multi-host capacity are deferred. Two local worker processes prove functional coordination, not scaling capacity. Controlled test hooks/context restarts are distinct from OS or database disaster recovery.
+
+The Compose database is retained. Temporary API/worker JVMs started for this verification were stopped by their recorded process IDs after evidence collection. Their termination was cleanup, not a crash-recovery experiment. PowerShell execution policy was not changed; equivalent direct Maven/HTTP calls were used.
 
 ## Local portable tool setup
 
@@ -34,11 +47,12 @@ $mavenHome=(Get-ChildItem -LiteralPath $runtimeRoot -Directory | Where-Object Na
 $env:PATH="$env:JAVA_HOME/bin;$mavenHome/bin;$env:PATH"
 # This machine needs its Windows-trusted certificate chain for Maven HTTPS.
 $env:MAVEN_OPTS='-Djavax.net.ssl.trustStoreType=Windows-ROOT'
+# Apply to Maven, forked tests, API and worker JVMs in this shell.
+$env:JAVA_TOOL_OPTIONS='-Duser.timezone=UTC'
+$env:DEBUG='false'
 java -version
 mvn -version
 mvn -B '-Dtest=*Test,!*IntegrationTest' test
 ```
 
 The first dependency download failed with PKIX certificate-chain validation. Windows-ROOT resolved it while preserving certificate/hostname verification; no insecure TLS bypass or certificate-validation disable flag was used. Portable archives came from Microsoft's JDK download and Apache Maven Central, with vendor-published checksums compared before extraction. They are not committed.
-
-Next required external step: finish Docker Desktop/WSL2 repair, start Linux containers and obtain successful `docker version` client/server output. This may need administrator access or a restart. Then continue the [runtime verification checklist](runtime-verification-checklist.md) from PostgreSQL onward, fix failures and rerun the full suite. A Java build and unit pass alone do not establish migrations, Spring wiring, SQL, concurrency, approvals, chaos or capacity.

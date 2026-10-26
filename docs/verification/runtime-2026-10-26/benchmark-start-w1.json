@@ -1,0 +1,28 @@
+{
+  "harnessVersion" : "sql-service-v1",
+  "scenario" : "start",
+  "workers" : 1,
+  "startConcurrency" : 4,
+  "requestedWorkflows" : 20,
+  "startedWorkflows" : 20,
+  "expectedTasks" : 0,
+  "completedTasks" : 0,
+  "completedWorkflows" : 0,
+  "errors" : 0,
+  "deadlineSeconds" : 60,
+  "fanout" : 0,
+  "workflowStartsPerSecond" : 165.15099342451322,
+  "measurements" : {
+    "workflowStartMs" : {
+      "samples" : 20,
+      "p99" : 52.3284,
+      "p95" : 47.6825,
+      "p50" : 17.2014
+    }
+  },
+  "javaVersion" : "21.0.13.0.2",
+  "os" : "Windows 11",
+  "postgresImage" : "postgres:17.6",
+  "valid" : true,
+  "limitations" : "In-process SQL/service harness, no HTTP/network/worker executor/heartbeat costs, no warmup; isolated container. Not a production capacity claim."
+}

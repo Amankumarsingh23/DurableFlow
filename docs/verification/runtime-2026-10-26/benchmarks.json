@@ -1,0 +1,91 @@
+{
+  "testedCommit": "c07b1ada93c85e61830fef75ea565cce1b4caefa",
+  "runs": [
+    {
+      "scenario": "queue",
+      "consumerThreads": 1,
+      "requestedWorkflows": 100,
+      "completedWorkflows": 100,
+      "completedTasks": 100,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-queue-w1.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=queue -Dbench.workers=1 -Dbench.workflows=100 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "queue",
+      "consumerThreads": 4,
+      "requestedWorkflows": 100,
+      "completedWorkflows": 100,
+      "completedTasks": 100,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-queue-w4.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=queue -Dbench.workers=4 -Dbench.workflows=100 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "queue",
+      "consumerThreads": 16,
+      "requestedWorkflows": 100,
+      "completedWorkflows": 100,
+      "completedTasks": 100,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-queue-w16.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=queue -Dbench.workers=16 -Dbench.workflows=100 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "start",
+      "consumerThreads": 1,
+      "requestedWorkflows": 20,
+      "completedWorkflows": 0,
+      "completedTasks": 0,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-start-w1.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=start -Dbench.workers=1 -Dbench.workflows=20 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "dag",
+      "consumerThreads": 4,
+      "requestedWorkflows": 20,
+      "completedWorkflows": 20,
+      "completedTasks": 200,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-dag-w4.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=dag -Dbench.workers=4 -Dbench.workflows=20 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "timer",
+      "consumerThreads": 1,
+      "requestedWorkflows": 20,
+      "completedWorkflows": 20,
+      "completedTasks": 20,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-timer-w1.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=timer -Dbench.workers=1 -Dbench.workflows=20 test",
+      "exitCode": 0
+    },
+    {
+      "scenario": "signal",
+      "consumerThreads": 1,
+      "requestedWorkflows": 20,
+      "completedWorkflows": 20,
+      "completedTasks": 20,
+      "errors": 0,
+      "valid": true,
+      "report": "benchmark-signal-w1.json",
+      "command": "mvn -B -ntp -Dtest=BenchmarkIntegrationTest -Ddurableflow.benchmark=true -Dbench.scenario=signal -Dbench.workers=1 -Dbench.workflows=20 test",
+      "exitCode": 0
+    }
+  ],
+  "limitations": "Single exploratory cold run per setting; no warmup or repeats; local in-process SQL/service consumers, not TaskWorker JVMs or HTTP; 20/100 workflows do not establish stable p99 or production capacity. Start intentionally does not advance workflows.",
+  "environment": "Same hardware/JVM/Docker as regression.json; UTC; timers/children/schedule pollers disabled by fixture; default Hikari pool and no concurrent live demo JVMs."
+}

@@ -1,6 +1,6 @@
 # Benchmark plan and harness
 
-No throughput/latency numbers are claimed. Run correctness tests first. `BenchmarkIntegrationTest` is opt-in with `-Ddurableflow.benchmark=true` and uses a fresh Testcontainers PostgreSQL 17.6 database. It calls actual workflow/queue/timer/signal services. It never connects to a production database or manufactures latency samples.
+Seven local smoke runs completed after the full correctness suite passed on 2026-10-26. Reports contain measured observations; no production capacity claim is made. Run correctness tests first. `BenchmarkIntegrationTest` is opt-in with `-Ddurableflow.benchmark=true` and uses a fresh Testcontainers PostgreSQL 17.6 database. It calls actual workflow/queue/timer/signal services. It never connects to a production database or manufactures latency samples.
 
 ```powershell
 mvn -B '-Dtest=BenchmarkIntegrationTest' '-Ddurableflow.benchmark=true' '-Dbench.scenario=queue' '-Dbench.workflows=20' '-Dbench.workers=1' test
@@ -29,4 +29,20 @@ For credible comparisons: record Git commit, hardware/CPU/memory, Docker resourc
 
 PostgreSQL/manual observations: run the exact source queries in [SQL inspection](sql-inspection.md), capture EXPLAIN (ANALYZE, BUFFERS), pg_stat_activity wait events, locks, transaction age, pg_stat_database commits/rollbacks/deadlocks/temp files, connection utilization, host CPU/IO and table/index/vacuum growth. `pg_stat_statements` requires environment-specific setup and is not assumed installed. More connections/indexes are not automatically better.
 
-Results status: **NOT RUN in this workspace**. Java/Maven now work, but these Docker-backed measurements still await a functioning container engine and the preceding correctness checks. Do not copy the teaching session's illustrative scaling numbers into reports or resume bullets.
+## Recorded local smoke results - 2026-10-26
+
+All seven opt-in Maven invocations passed with zero errors and valid completed workloads. [Commands/settings](verification/runtime-2026-10-26/benchmarks.json), [hardware and tested commit](verification/runtime-2026-10-26/regression.json), and individual reports preserve actual observations.
+
+| Scenario | Consumer threads | Workflows started | Workflows completed | Tasks completed | Errors |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| queue | 1 | 100 | 100 | 100 | 0 |
+| queue | 4 | 100 | 100 | 100 | 0 |
+| queue | 16 | 100 | 100 | 100 | 0 |
+| start | 1 | 20 | 0 | 0 | 0 |
+| dag | 4 | 20 | 20 | 200 | 0 |
+| timer | 1 | 20 | 20 | 20 | 0 |
+| signal | 1 | 20 | 20 | 20 | 0 |
+
+Start mode intentionally persists workflows without advancing them; zero completed workflows is expected there. Queue comparisons used identical 100-workflow fixtures at 1/4/16 threads, each with a fresh PostgreSQL container. The other modes used 20 workflows (DAG fanout 8). These are exploratory cold smoke runs with no warmup/repetition, not a reliable scaling curve or p99 estimate. The no-op SQL/service harness excludes TaskWorker executor/heartbeat, HTTP and real providers. Independent-worker functional verification is separate live-demo evidence, not a benchmark.
+
+Representative warmed repeated measurements, saturation/soak, HTTP and multi-host scaling remain deferred. No measured latency/throughput is added to resume bullets. Do not copy the teaching session's illustrative numbers into reports.
