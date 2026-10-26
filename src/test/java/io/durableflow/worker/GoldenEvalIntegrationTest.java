@@ -153,7 +153,9 @@ class GoldenEvalIntegrationTest {
             }
         }
         var activity=activities.findByWorkflowRunIdOrderByActivityIdAsc(run).getFirst();var r=routes.find(activity.getId()).orElseThrow();var usage=routes.summary(activity.getId()).orElseThrow();
-        return Map.of("status",runs.get(run).status().name(),"reason",Objects.toString(r.code(),"SUCCESS"),"finalProvider",Objects.toString(activity.getOutputJson().get("provider"),"NONE"),
+        // A rejected/exhausted route correctly has no successful activity output.
+        var output = activity.getOutputJson();
+        return Map.of("status",runs.get(run).status().name(),"reason",Objects.toString(r.code(),"SUCCESS"),"finalProvider",Objects.toString(output == null ? null : output.get("provider"),"NONE"),
             "fallbacks",r.activeIndex(),"providerAttempts",r.totalAttempts(),"weakProviderExecutions",pb.invocations().stream().filter(i -> i.request().model().equals("economy-v1")).count(),"modelCalls",1,"costMicros",usage.knownCostMicros());
     }
     private Map<String,Object> crash() throws Exception {
