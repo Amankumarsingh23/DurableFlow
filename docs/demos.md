@@ -13,12 +13,12 @@ Invoke-RestMethod -Method Post -Uri "$api/workflow-definitions" -ContentType 'ap
 $run=Invoke-RestMethod -Method Post -Uri "$api/workflow-runs" -ContentType 'application/json' -Body (Get-Content examples/start-parallel-order.json -Raw)
 Invoke-RestMethod -Method Post -Uri "$api/workflow-runs/$($run.runId)/advance"
 Invoke-RestMethod -Uri "$api/workflow-runs/$($run.runId)"
-Invoke-RestMethod -Uri "$api/workflow-runs/$($run.runId)/history"
+Invoke-RestMethod -Uri "$api/workflow-runs/$($run.runId)/events"
 # Separate Saga fixture simulates shipment failure and configured compensation.
 Invoke-RestMethod -Method Post -Uri "$api/workflow-definitions" -ContentType 'application/json' -Body (Get-Content examples/saga-order-v1.json -Raw)
 $saga=Invoke-RestMethod -Method Post -Uri "$api/workflow-runs" -ContentType 'application/json' -Body (Get-Content examples/start-saga-order.json -Raw)
 Invoke-RestMethod -Method Post -Uri "$api/workflow-runs/$($saga.runId)/advance"
-Invoke-RestMethod -Uri "$api/workflow-runs/$($saga.runId)/history"
+Invoke-RestMethod -Uri "$api/workflow-runs/$($saga.runId)/events"
 # Deterministic claim death, provider-effect death and stale-owner evidence:
 .\scripts\run-chaos.ps1 -Scenario leases
 .\scripts\run-chaos.ps1 -Scenario effects
@@ -45,7 +45,7 @@ for($i=0;$i -lt 60;$i++) {
     Start-Sleep -Milliseconds 250
 }
 if($view.status -ne 'COMPLETED'){throw 'Retrieval checkpoint did not complete; inspect worker/history.'}
-$history=@(Invoke-RestMethod "$api/workflow-runs/$($retrieval.runId)/history")
+$history=@(Invoke-RestMethod "$api/workflow-runs/$($retrieval.runId)/events")
 $retrievalActivity=($history | Where-Object { $_.eventType -eq 'ACTIVITY_COMPLETED' -and $_.activityId -eq 'retrieve' } | Select-Object -First 1).activityExecutionId
 if(-not $retrievalActivity){throw 'No completed retrieval execution identity found.'}
 # Explicit demo authorization to approve only the expected synthetic O-42 / 4500 request.

@@ -13,6 +13,8 @@ import java.net.http.*;
 import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"durableflow.limits.http-body-bytes=1024","durableflow.limits.workflow-input-bytes=64","durableflow.limits.signal-bytes=32","durableflow.limits.schedule-input-bytes=64","durableflow.timers.polling-enabled=false","durableflow.children.polling-enabled=false","durableflow.schedules.polling-enabled=false"})
 class SecurityBoundaryIntegrationTest {

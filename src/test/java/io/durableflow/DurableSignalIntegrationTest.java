@@ -28,6 +28,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "durableflow.timers.polling-enabled=false")
 class DurableSignalIntegrationTest {

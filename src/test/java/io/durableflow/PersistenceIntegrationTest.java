@@ -26,6 +26,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PersistenceIntegrationTest {
@@ -48,7 +50,7 @@ class PersistenceIntegrationTest {
 
     @Test
     void applicationStartsWithMigratedValidatedSchemaAndHealthyHttpEndpoint() throws Exception {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
         assertThat(flyway.info().pending()).isEmpty();
         var response = HttpClient.newHttpClient().send(
                 HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/actuator/health"))

@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.*;
 /** Explicit opt-in, isolated PostgreSQL service/SQL benchmark. No fabricated observations.
  * Manual fake handler bypasses TaskWorker executor/heartbeat overhead: this measures the queue protocol. */
 @EnabledIfSystemProperty(named="durableflow.benchmark",matches="true")
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(properties={"durableflow.timers.polling-enabled=false","durableflow.children.polling-enabled=false","durableflow.schedules.polling-enabled=false"})
 class BenchmarkIntegrationTest {

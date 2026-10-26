@@ -28,6 +28,8 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.*;
 
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest
 class PostgresTaskQueueIntegrationTest {

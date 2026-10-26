@@ -28,6 +28,8 @@ import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 
 /** Offline test-friendly demo: executes real PostgreSQL engine paths, never canned observed answers. */
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(properties={"durableflow.timers.polling-enabled=false","durableflow.children.polling-enabled=false","durableflow.schedules.polling-enabled=false"})
 class GoldenEvalIntegrationTest {

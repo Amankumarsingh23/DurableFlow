@@ -27,6 +27,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
 
+// Close pollers/pools before this class's disposable PostgreSQL container stops.
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @SpringBootTest(properties={"durableflow.timers.polling-enabled=false", "durableflow.children.polling-enabled=false", "durableflow.schedules.polling-enabled=false"})
 class ModelActivityIntegrationTest {

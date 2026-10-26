@@ -43,6 +43,8 @@ These are implemented contracts with authored tests, not runtime-verified result
 Requires JDK 21, Maven, Docker with a running Linux-container daemon, and Compose. No wrapper is committed. Local PostgreSQL uses the existing demo defaults; use environment/secret-manager credentials for real deployment. `.env.example` contains placeholders. Compose reads `.env`; Java processes need their own exported environment.
 
 ```powershell
+# Use a PostgreSQL-compatible JVM timezone, including Maven's test JVMs.
+$env:JAVA_TOOL_OPTIONS='-Duser.timezone=UTC'
 java -version
 mvn -version
 docker version
@@ -64,7 +66,7 @@ $api='http://localhost:8080/api'
 Invoke-RestMethod -Method Post -Uri "$api/workflow-definitions" -ContentType 'application/json' -Body (Get-Content examples/parallel-order-v1.json -Raw)
 $run=Invoke-RestMethod -Method Post -Uri "$api/workflow-runs" -ContentType 'application/json' -Body (Get-Content examples/start-parallel-order.json -Raw)
 Invoke-RestMethod -Method Post -Uri "$api/workflow-runs/$($run.runId)/advance"
-Invoke-RestMethod "$api/workflow-runs/$($run.runId)/history"
+Invoke-RestMethod "$api/workflow-runs/$($run.runId)/events"
 ```
 
 A start stores state; advancement authorizes ready work; the separate worker executes it. Duplicate definition registration conflicts by design. A GET immediately after advancement may still show RUNNING.

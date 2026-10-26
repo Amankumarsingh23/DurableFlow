@@ -18,6 +18,7 @@ API/orchestrator processes reconstruct work from persisted definitions, runs, ou
 Run the API with the default profile and workers with:
 
 ```powershell
+$env:JAVA_TOOL_OPTIONS='-Duser.timezone=UTC'
 mvn -B -DskipTests package
 # Supply DB_URL/DB_USERNAME/DB_PASSWORD to BOTH shells via environment or a secret manager.
 java -jar target/durableflow-0.0.1-SNAPSHOT.jar
