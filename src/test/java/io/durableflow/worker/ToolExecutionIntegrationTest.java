@@ -102,7 +102,8 @@ class ToolExecutionIntegrationTest {
         assertThatThrownBy(() -> jdbc.update("UPDATE tool_request SET decision_json='{}'::jsonb WHERE id=?",r.id())).hasMessageContaining("TOOL_IMMUTABLE_REQUEST");
         assertThatThrownBy(() -> r.requireIdentity("refundOrder",Map.of("orderId","O-42","amount",45000))).hasMessage("TOOL_IDEMPOTENCY_MISUSE");
         assertThat(worker.runOne()).isTrue();assertThat(effects()).isEqualTo(1);
-        assertThat(ToolJson.object(requests.require(r.id()).result().get("data")).get("amount").toString()).isEqualTo("4.5E+3");
+        var amount = ToolJson.object(requests.require(r.id()).result().get("data")).get("amount");
+        assertThat(new java.math.BigDecimal(amount.toString())).isEqualByComparingTo("4500");
     }
     @Test void transientProviderFailureUsesExistingRetryQueueAndStableRequestKey() {
         UUID run=ready(false);approve(run,true);var r=requests.forRun(run).orElseThrow();
